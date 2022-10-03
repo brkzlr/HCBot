@@ -129,6 +129,27 @@ func HasRoles(member *discordgo.Member, rolesID []string) map[string]bool {
 	return rolesMap
 }
 
+func GetAllGuildMembers(s *discordgo.Session, guildID string) []*discordgo.Member {
+	guildMembers, _ := s.GuildMembers(guildID, "", 1000)
+
+	//Discord API can only return a maximum of 1000 members.
+	//To get all the members for guilds that have more than this limit
+	//we check the length of the returned slice and if it's 1000 we try to grab
+	//the next 1000 starting from the last member in the previous request using it's ID,
+	//repeating this until we get a slice with less than 1000.
+	gotAll := len(guildMembers) < 1000
+	for !gotAll {
+		lastID := guildMembers[len(guildMembers)-1].User.ID
+		tempGMembers, _ := s.GuildMembers(guildID, lastID, 1000)
+		if len(tempGMembers) < 1000 {
+			gotAll = true
+		}
+		guildMembers = append(guildMembers, tempGMembers...)
+	}
+
+	return guildMembers
+}
+
 func GetCompletionSymbol(gameCompl bool) string {
 	if gameCompl {
 		return "✅"

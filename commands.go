@@ -39,7 +39,7 @@ func init() {
 			rolesCount[roleID] = 0
 		}
 
-		guildMembers, _ := s.GuildMembers(m.GuildID, "", 0)
+		guildMembers := GetAllGuildMembers(s, m.GuildID)
 		for _, member := range guildMembers {
 			rolesMap := HasRoles(member, rolesToCheck)
 			for roleID, hasRole := range rolesMap {
@@ -47,8 +47,8 @@ func init() {
 					rolesCount[roleID]++
 				}
 			}
-
 		}
+
 		resultStr := "Number of users with each role:\n" +
 			"MCC:  **%d**\n" +
 			"Infinite:  **%d**\n" +
