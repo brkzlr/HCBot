@@ -39,28 +39,6 @@ func saveDatabase() {
 	fmt.Println("Saved database successfully!")
 }
 
-func init() {
-	jsonFile, err := os.Open("tokens.json")
-	if err != nil {
-		fmt.Println("Error opening tokens.json! Aborting!")
-		return
-	}
-	defer jsonFile.Close()
-
-	fileByte, _ := io.ReadAll(jsonFile)
-	json.Unmarshal(fileByte, &Tokens)
-
-	dbFile, err := os.Open("database.json")
-	if err != nil {
-		fmt.Println("Error opening database.json! Aborting!")
-		return
-	}
-	defer dbFile.Close()
-
-	fileByte, _ = io.ReadAll(dbFile)
-	json.Unmarshal(fileByte, &DatabaseMap)
-}
-
 func checkTimedAchievs(session *discordgo.Session) {
 	today := time.Now().UTC()
 	if today.Hour() != 9 || today.Minute() != 0 { //@todo: Find a better way to activate at 9 AM UTC
@@ -90,6 +68,30 @@ func checkTimedAchievs(session *discordgo.Session) {
 	}
 }
 
+func init() {
+	jsonFile, err := os.Open("tokens.json")
+	if err != nil {
+		fmt.Println("Error opening tokens.json! Aborting!")
+		return
+	}
+	defer jsonFile.Close()
+
+	fileByte, _ := io.ReadAll(jsonFile)
+	json.Unmarshal(fileByte, &Tokens)
+
+	dbFile, err := os.Open("database.json")
+	if err != nil {
+		fmt.Println("Error opening database.json! Aborting!")
+		return
+	}
+	defer dbFile.Close()
+
+	fileByte, _ = io.ReadAll(dbFile)
+	json.Unmarshal(fileByte, &DatabaseMap)
+
+	go KeepAliveRequest() //Do a simple request to OpenXBL so token is authenticated
+}
+
 func main() {
 	discord, err := discordgo.New("Bot " + Tokens.Discord)
 	if err != nil {
@@ -111,15 +113,16 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 
-	saveTicker := time.NewTicker(1 * time.Hour)
+	ticker := time.NewTicker(1 * time.Hour)
 	achievTicker := time.NewTicker(1 * time.Minute)
-	defer saveTicker.Stop()
+	defer ticker.Stop()
 	defer achievTicker.Stop()
 
 	for loop := true; loop; {
 		select {
-		case <-saveTicker.C:
+		case <-ticker.C:
 			saveDatabase()
+			go KeepAliveRequest()
 		case <-achievTicker.C:
 			checkTimedAchievs(discord)
 		case <-sc:
