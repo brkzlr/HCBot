@@ -98,6 +98,19 @@ func RequestPlayerGT(gamerTag string) (string, error) {
 	return respID[0].ID, nil
 }
 
+//Workaround until OpenXBL API changed for official Xbox API
+func KeepAliveRequest() {
+	req, _ := http.NewRequest("GET", "https://xbl.io/api/v2/account", nil)
+	req.Header.Add("X-Authorization", Tokens.OpenXBL)
+	req.Header.Add("Accept", "application/json")
+
+	client := &http.Client{}
+	client.Do(req)
+	fmt.Println("Sent KeepAlive to OpenXBL!")
+	//We don't care about the result, we just want to do a GET request on OpenXBL
+	//so our token gets refreshed and future requests after idling won't fail
+}
+
 func AddGamertagToDB(discordID, xblID string) {
 	GlobalLock.Lock()
 	DatabaseMap[discordID] = xblID
