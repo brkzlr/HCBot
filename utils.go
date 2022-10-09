@@ -66,7 +66,9 @@ func RequestPlayerAchievements(discordID string) ([]Game, error) {
 }
 
 func RequestPlayerGT(gamerTag string) (string, error) {
-	urlTag := strings.ReplaceAll(gamerTag, " ", "%20")
+	//Gamertags with a suffix should not include the hashtag
+	urlTag := strings.ReplaceAll(gamerTag, "#", "")
+	urlTag = strings.ReplaceAll(urlTag, " ", "%20")
 	url := "https://xbl.io/api/v2/friends/search?gt=" + urlTag
 
 	req, err := http.NewRequest("GET", url, nil)
