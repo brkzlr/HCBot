@@ -21,6 +21,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		go commandFnc(s, m.Message)
 	} else {
 		ReactFail(s, m.Message)
-		s.ChannelMessageSend(m.ChannelID, "That command doesn't exist! Try +help!")
+		s.ChannelMessageSend(m.ChannelID, "That command doesn't exist! Try `+help`")
 	}
 }
