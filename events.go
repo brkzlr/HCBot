@@ -10,6 +10,13 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
+	for _, user := range m.Mentions {
+		if user.ID == s.State.User.ID {
+			s.MessageReactionAdd(m.ChannelID, m.ID, "🤡")
+			ReplyToMsg(s, m.Message, "Don't ping.")
+			return
+		}
+	}
 	if !strings.HasPrefix(m.Content, "+") {
 		return
 	}
