@@ -16,6 +16,9 @@ const (
 	mccMasterRoleID = "985644874051231825"
 	hcRoleID        = "985327939161849857"
 	fcRoleID        = "985328007088590918"
+
+	botChannelID   = "984075793904848916"
+	proofChannelID = "984079675385077820"
 )
 
 type TimedRoles struct {
