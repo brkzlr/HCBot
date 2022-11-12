@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -14,6 +15,22 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if user.ID == s.State.User.ID {
 			s.MessageReactionAdd(m.ChannelID, m.ID, "🤡")
 			ReplyToMsg(s, m.Message, "Don't ping.")
+			return
+		}
+	}
+
+	if m.ChannelID == proofChannelID {
+		msg := strings.ToLower(m.Content)
+		if strings.Contains(msg, "mcc") || strings.Contains(msg, "infinite") ||
+			strings.Contains(msg, "legacy") || strings.Contains(msg, "modern") {
+
+			str := fmt.Sprintf("<@%s> Read the description of the channel please!", m.Author.ID)
+			s.ChannelMessageSend(proofChannelID, str)
+			s.ChannelMessageDelete(proofChannelID, m.ID)
+			return
+		} else if strings.Contains(msg, "halo completionist") || strings.Contains(msg, "hc") {
+			str := fmt.Sprintf("Make sure you used the `+hc` command in <#%s> beforehand. This channel is only if SA/SS is bugged for you!", botChannelID)
+			ReplyToMsg(s, m.Message, str)
 			return
 		}
 	}
