@@ -11,6 +11,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
+	if m.Author.Bot {
+		return
+	}
 	for _, user := range m.Mentions {
 		if user.ID == s.State.User.ID {
 			s.MessageReactionAdd(m.ChannelID, m.ID, "🤡")
