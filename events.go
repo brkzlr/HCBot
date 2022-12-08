@@ -24,8 +24,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	if m.ChannelID == proofChannelID {
 		msg := strings.ToLower(m.Content)
-		if strings.Contains(msg, "mcc") || strings.Contains(msg, "infinite") ||
-			strings.Contains(msg, "legacy") || strings.Contains(msg, "modern") {
+		if (strings.Contains(msg, "mcc") && !strings.Contains(msg, "master")) ||
+			strings.Contains(msg, "infinite") ||
+			strings.Contains(msg, "legacy") ||
+			strings.Contains(msg, "modern") {
 
 			str := fmt.Sprintf("<@%s> Read the description of the channel please!", m.Author.ID)
 			s.ChannelMessageSend(proofChannelID, str)
