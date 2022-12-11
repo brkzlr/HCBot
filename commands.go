@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -20,7 +21,8 @@ func init() {
 			+infinite - checks if you're eligible for Halo Infinite role
 			+legacy - checks if you're eligible for Legacy Completionist role
 			+modern - checks if you're eligible for Modern Completionist role
-			+hc - checks if you're eligible for Halo Completionist role`,
+			+hc - checks if you're eligible for Halo Completionist role
+			+riddle - for those that fancy a riddle`,
 			Inline: true,
 		}
 		embed := discordgo.MessageEmbed{
@@ -497,4 +499,22 @@ Note 2: **If you finished everything and played any game on a non-XBL platform, 
 		s.GuildMemberRoleRemove(m.GuildID, m.Author.ID, modernRoleID)
 		s.GuildMemberRoleAdd(m.GuildID, m.Author.ID, hcRoleID)
 	}
+	commands["+riddle"] = func(s *discordgo.Session, m *discordgo.Message) {
+		LogCommand("riddle", m.Author.Username)
+
+		riddle, err := GetRiddle()
+		if err != nil {
+			ReplyToMsg(s, m, "Whoops, encountered an error while trying to find a riddle. Sorry!")
+			fmt.Println(err)
+			return
+		}
+
+		msgToPrint := riddle.Question + "\n\nAnswer will be revealed in one minute."
+		riddleMsg, _ := ReplyToMsg(s, m, msgToPrint)
+
+		riddleTimer := time.NewTimer(1 * time.Minute)
+		<-riddleTimer.C
+		ReplyToMsg(s, riddleMsg, riddle.Answer)
+	}
+
 }
