@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -23,6 +24,11 @@ type Game struct {
 	Stats   AchievementsStats `json:"achievement"`
 	TitleID string            `json:"titleId"`
 	Name    string            `json:"name"`
+}
+
+type Riddle struct {
+	Question string `json:"riddle"`
+	Answer   string `json:"answer"`
 }
 
 func RequestPlayerAchievements(discordID string) ([]Game, error) {
@@ -100,6 +106,23 @@ func RequestPlayerGT(gamerTag string) (string, error) {
 	return respID[0].ID, nil
 }
 
+func GetRiddle() (Riddle, error) {
+	resp, err := http.Get("https://riddles-api.vercel.app/random")
+	if err != nil {
+		return Riddle{"", ""}, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	var riddleResp Riddle
+	if err = json.Unmarshal(body, &riddleResp); err != nil {
+		return Riddle{"", ""}, err
+	}
+
+	return riddleResp, err
+}
+
 //Workaround until OpenXBL API changed for official Xbox API
 func KeepAliveRequest() {
 	req, _ := http.NewRequest("GET", "https://xbl.io/api/v2/account", nil)
@@ -173,8 +196,8 @@ func GetCompletionSymbol(gameCompl bool) string {
 	}
 }
 
-func ReplyToMsg(s *discordgo.Session, m *discordgo.Message, replyMsg string) {
-	s.ChannelMessageSendReply(m.ChannelID, replyMsg, &discordgo.MessageReference{
+func ReplyToMsg(s *discordgo.Session, m *discordgo.Message, replyMsg string) (*discordgo.Message, error) {
+	return s.ChannelMessageSendReply(m.ChannelID, replyMsg, &discordgo.MessageReference{
 		MessageID: m.ID,
 		ChannelID: m.ChannelID,
 	})
