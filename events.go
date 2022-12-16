@@ -14,10 +14,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.Bot {
 		return
 	}
+	//Explain users that ping the bot how to use the bot.
 	for _, user := range m.Mentions {
-		if user.ID == s.State.User.ID {
+		if user.ID == s.State.User.ID && m.MessageReference == nil { //Check for MessageReference since Mentions include replies.
 			s.MessageReactionAdd(m.ChannelID, m.ID, "🤡")
-			ReplyToMsg(s, m.Message, "Don't ping.")
+			str := fmt.Sprintf("Don't ping me. Type `+help` in <#%s>", botChannelID)
+			ReplyToMsg(s, m.Message, str)
 			return
 		}
 	}
