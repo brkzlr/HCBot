@@ -84,6 +84,8 @@ func init() {
 
 		gTag := strings.Join(contentSpl, " ")
 		gTag = strings.Trim(gTag, "\"")
+		gTag = strings.Trim(gTag, "“")
+		gTag = strings.Trim(gTag, "”")
 		xuid, err := RequestPlayerGT(gTag)
 		if err != nil {
 			ReactFail(s, m)
