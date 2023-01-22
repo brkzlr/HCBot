@@ -123,7 +123,7 @@ func GetRiddle() (Riddle, error) {
 	return riddleResp, err
 }
 
-//Workaround until OpenXBL API changed for official Xbox API
+// Workaround until OpenXBL API changed for official Xbox API
 func KeepAliveRequest() {
 	req, _ := http.NewRequest("GET", "https://xbl.io/api/v2/account", nil)
 	req.Header.Add("X-Authorization", Tokens.OpenXBL)
@@ -165,6 +165,19 @@ func HasRoles(member *discordgo.Member, rolesID []string) map[string]bool {
 	}
 
 	return rolesMap
+}
+
+func IsStaff(member *discordgo.Member) bool {
+	// Pillar / Oracle (Mod) / Guardian (Admin) roles
+	staffRoles := []string{"987989822813650974", "984081125657964664", "984080972108668959"}
+	result := HasRoles(member, staffRoles)
+	for _, roleID := range staffRoles {
+		if result[roleID] {
+			return true
+		}
+	}
+
+	return false
 }
 
 func GetAllGuildMembers(s *discordgo.Session, guildID string) []*discordgo.Member {
