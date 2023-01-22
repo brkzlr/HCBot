@@ -24,7 +24,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 	}
 
-	if m.ChannelID == proofChannelID {
+	if m.ChannelID == proofChannelID && !IsStaff(m.Member) {
 		msg := strings.ToLower(m.Content)
 		if (strings.Contains(msg, "mcc") && !strings.Contains(msg, "master")) ||
 			strings.Contains(msg, "infinite") ||
