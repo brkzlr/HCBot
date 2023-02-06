@@ -140,6 +140,7 @@ func AddGamertagToDB(discordID, xblID string) {
 	GlobalLock.Lock()
 	DatabaseMap[discordID] = xblID
 	GlobalLock.Unlock()
+	DirtyDatabase = true
 }
 
 func HasRole(member *discordgo.Member, roleID string) bool {

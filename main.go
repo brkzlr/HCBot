@@ -18,10 +18,15 @@ var (
 		OpenXBL string `json:"xblToken"`
 	}
 
-	DatabaseMap map[string]string
+	DatabaseMap   map[string]string
+	DirtyDatabase bool
 )
 
 func saveDatabase() {
+	if !DirtyDatabase {
+		return
+	}
+
 	dbFile, err := os.Open("database.json")
 	if err != nil {
 		fmt.Println("Error opening database to save!")
