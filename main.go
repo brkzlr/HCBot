@@ -42,6 +42,7 @@ func saveDatabase() {
 
 	os.WriteFile("database.json", jsonMap, 0644)
 	fmt.Println("Saved database successfully!")
+	DirtyDatabase = false
 }
 
 func checkTimedAchievs(session *discordgo.Session) {
