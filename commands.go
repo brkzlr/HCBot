@@ -17,12 +17,14 @@ func init() {
 			Name: "Commands Help",
 			Value: `+gamertag (or +gt) "gamertag" - sets your gamertag
 			+count - shows number of users with corresponding completion role
+			+riddle - for those that fancy a riddle
+
+			***Only after setting your gamertag once:***
 			+mcc - checks if you're eligible for MCC role
 			+infinite - checks if you're eligible for Halo Infinite role
 			+legacy - checks if you're eligible for Legacy Completionist role
 			+modern - checks if you're eligible for Modern Completionist role
-			+hc - checks if you're eligible for Halo Completionist role
-			+riddle - for those that fancy a riddle`,
+			+hc - checks if you're eligible for Halo Completionist role`,
 			Inline: true,
 		}
 		embed := discordgo.MessageEmbed{
