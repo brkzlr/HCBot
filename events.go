@@ -14,9 +14,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.Bot {
 		return
 	}
-	//Explain users that ping the bot how to use the bot.
+	// Explain users that ping the bot how to use the bot.
 	for _, user := range m.Mentions {
-		if user.ID == s.State.User.ID && m.MessageReference == nil { //Check for MessageReference since Mentions include replies.
+		if user.ID == s.State.User.ID && m.MessageReference == nil { // Check for MessageReference since Mentions include replies.
 			s.MessageReactionAdd(m.ChannelID, m.ID, "🤡")
 			str := fmt.Sprintf("Don't ping me. Type `+help` in <#%s>", botChannelID)
 			ReplyToMsg(s, m.Message, str)
@@ -27,11 +27,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.ChannelID == proofChannelID && !IsStaff(m.Member) {
 		msg := strings.ToLower(m.Content)
 		if (strings.Contains(msg, "mcc") && !strings.Contains(msg, "master")) ||
+			strings.Contains(msg, "chief collection") ||
 			strings.Contains(msg, "infinite") ||
 			strings.Contains(msg, "legacy") ||
 			strings.Contains(msg, "modern") {
 
-			str := fmt.Sprintf("<@%s> Read the description of the channel please!", m.Author.ID)
+			str := fmt.Sprintf("<@%s> You can only obtain that role by using me in <#%s>! Type `+help` in there to begin.", m.Author.ID, botChannelID)
 			s.ChannelMessageSend(proofChannelID, str)
 			s.ChannelMessageDelete(proofChannelID, m.ID)
 			return
@@ -39,6 +40,23 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			str := fmt.Sprintf("Make sure you used the `+hc` command in <#%s> beforehand. This channel is only if SA/SS is bugged for you!", botChannelID)
 			ReplyToMsg(s, m.Message, str)
 			return
+		} else {
+			saidProofRole := func(msg string) bool {
+				return strings.Contains(msg, "franchise") ||
+					strings.Contains(msg, "lasochist") ||
+					strings.Contains(msg, "mcc master") ||
+					strings.Contains(msg, "ice") ||
+					strings.Contains(msg, "fire") ||
+					strings.Contains(msg, "jacker") || strings.Contains(msg, "jackal")
+			}
+			for _, attach := range m.Attachments {
+				if attach != nil && attach.Height != 0 && !saidProofRole(msg) { // Posted image but didn't say an acceptable proof role
+					str := fmt.Sprintf("<@%s> Please state the exact name of the vanity role you wish to obtain in the same message as the image!", m.Author.ID)
+					s.ChannelMessageSend(proofChannelID, str)
+					s.ChannelMessageDelete(proofChannelID, m.ID)
+					return
+				}
+			}
 		}
 	}
 	if !strings.HasPrefix(m.Content, "+") {
