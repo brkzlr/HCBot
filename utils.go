@@ -50,6 +50,7 @@ func RequestPlayerAchievements(discordID string) ([]Game, error) {
 	if err != nil {
 		return nil, errors.New("Whoops! Server responded with an error! Apologies, please try again!")
 	}
+	defer resp.Body.Close()
 
 	decoder := json.NewDecoder(resp.Body)
 	var objMap map[string]json.RawMessage
@@ -89,6 +90,7 @@ func RequestPlayerGT(gamerTag string) (string, error) {
 	if err != nil {
 		return "", errors.New("Whoops! Server responded with an error! Apologies, please try again!")
 	}
+	defer resp.Body.Close()
 
 	decoder := json.NewDecoder(resp.Body)
 	var objMap map[string]json.RawMessage
@@ -130,8 +132,8 @@ func KeepAliveRequest() {
 	req.Header.Add("Accept", "application/json")
 
 	client := &http.Client{}
-	client.Do(req)
-	fmt.Println("Sent KeepAlive to OpenXBL!")
+	resp, _ := client.Do(req)
+	resp.Body.Close()
 	//We don't care about the result, we just want to do a GET request on OpenXBL
 	//so our token gets refreshed and future requests after idling won't fail
 }
@@ -169,8 +171,8 @@ func HasRoles(member *discordgo.Member, rolesID []string) map[string]bool {
 }
 
 func IsStaff(member *discordgo.Member) bool {
-	// Pillar / Oracle (Mod) / Guardian (Admin) roles
-	staffRoles := []string{"987989822813650974", "984081125657964664", "984080972108668959"}
+	// Pillar / Oracle (Mod) / Guardian (Admin) / Founder roles
+	staffRoles := []string{"987989822813650974", "984081125657964664", "984080972108668959", "1075504782023852102"}
 	result := HasRoles(member, staffRoles)
 	for _, roleID := range staffRoles {
 		if result[roleID] {
