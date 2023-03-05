@@ -325,14 +325,6 @@ func init() {
 			}
 		}
 
-		// Add MCC/Infinite role anyway in case user didn't finish Modern Completionst
-		if completionMap["Halo: The Master Chief Collection"] && !HasRole(member, mccRoleID) && !HasRole(member, mccMasterRoleID) {
-			s.GuildMemberRoleAdd(m.GuildID, m.Author.ID, mccRoleID)
-		}
-		if completionMap["Halo Infinite"] && !HasRole(member, infiniteRoleID) {
-			s.GuildMemberRoleAdd(m.GuildID, m.Author.ID, infiniteRoleID)
-		}
-
 		for _, isDone := range completionMap {
 			if !isDone {
 				ReactFail(s, m)
@@ -421,16 +413,6 @@ Note: **If you finished everything and played any game on a non-XBL platform, pl
 
 			if _, exists := classicCompletionMap[game.Name]; exists {
 				classicCompletionMap[game.Name] = (game.Stats.CurrentGScore == game.Stats.TotalGScore)
-			}
-		}
-
-		// Add MCC/Infinite role anyway in case user didn't finish Modern Completionst and doesn't have Modern role
-		if !HasRole(member, modernRoleID) {
-			if completionMap["Halo: The Master Chief Collection"] && !HasRole(member, mccRoleID) && !HasRole(member, mccMasterRoleID) {
-				s.GuildMemberRoleAdd(m.GuildID, m.Author.ID, mccRoleID)
-			}
-			if completionMap["Halo Infinite"] && !HasRole(member, infiniteRoleID) {
-				s.GuildMemberRoleAdd(m.GuildID, m.Author.ID, infiniteRoleID)
 			}
 		}
 
