@@ -133,7 +133,9 @@ func KeepAliveRequest() {
 
 	client := &http.Client{}
 	resp, _ := client.Do(req)
-	resp.Body.Close()
+	if resp != nil {
+		resp.Body.Close()
+	}
 	//We don't care about the result, we just want to do a GET request on OpenXBL
 	//so our token gets refreshed and future requests after idling won't fail
 }
