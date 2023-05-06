@@ -45,16 +45,18 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			ReplyToMsg(s, m.Message, str)
 			return
 		} else {
-			saidProofRole := func(msg string) bool {
+			saidAcceptedWords := func(msg string) bool {
 				return strings.Contains(msg, "franchise") ||
 					strings.Contains(msg, "lasochist") ||
 					strings.Contains(msg, "mcc master") ||
 					strings.Contains(msg, "ice") ||
 					strings.Contains(msg, "fire") ||
-					strings.Contains(msg, "jacker") || strings.Contains(msg, "jackal")
+					strings.Contains(msg, "jacker") ||
+					strings.Contains(msg, "jackal") ||
+					strings.Contains(msg, "manual check")
 			}
 			for _, attach := range m.Attachments {
-				if attach != nil && attach.Height != 0 && !saidProofRole(msg) { // Posted image but didn't say an acceptable proof role
+				if attach != nil && attach.Height != 0 && !saidAcceptedWords(msg) { // Posted image but didn't say an acceptable proof role or keyword
 					str := fmt.Sprintf("<@%s> Please state the exact name of the vanity role you wish to obtain in the same message as the image!", m.Author.ID)
 					s.ChannelMessageSend(proofChannelID, str)
 					s.ChannelMessageDelete(proofChannelID, m.ID)
