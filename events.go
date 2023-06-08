@@ -21,10 +21,18 @@ func checkComboBreaker(s *discordgo.Session, m *discordgo.MessageCreate) {
 			return
 		}
 
+		participatingUsers := make(map[string]struct{}) // Ugly way of creating a Set data structure
+		participatingUsers[m.Author.ID] = struct{}{}
 		for _, message := range messages {
 			if message.Content != m.Content {
 				return
 			}
+
+			// Unique users only
+			if _, exists := participatingUsers[message.Author.ID]; exists {
+				return
+			}
+			participatingUsers[message.Author.ID] = struct{}{}
 		}
 
 		currentComboMsgs[m.ChannelID] = m.Content
