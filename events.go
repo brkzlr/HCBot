@@ -10,7 +10,7 @@ import (
 func checkComboBreaker(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if comboMsg, exists := currentComboMsgs[m.ChannelID]; exists {
 		if comboMsg != m.Content {
-			str := fmt.Sprintf("<@%s> You broke the combo!! You absolute fucking buffoon!!", m.Author.ID)
+			str := fmt.Sprintf("<@%s> You broke the combo!! You absolute buffoon!!", m.Author.ID)
 			ReplyToMsg(s, m.Message, str)
 			s.MessageReactionAdd(m.ChannelID, m.ID, "🤡")
 			delete(currentComboMsgs, m.ChannelID)
