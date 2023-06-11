@@ -17,14 +17,14 @@ func checkComboBreaker(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 	} else {
 		messages, err := s.ChannelMessages(m.ChannelID, 2, m.ID, "", "")
-		if err != nil {
+		if err != nil || len(messages) != 2 {
 			return
 		}
 
 		participatingUsers := make(map[string]struct{}) // Ugly way of creating a Set data structure
 		participatingUsers[m.Author.ID] = struct{}{}
 		for _, message := range messages {
-			if message.Content != m.Content {
+			if message.Content != m.Content || message.Content == "" {
 				return
 			}
 
