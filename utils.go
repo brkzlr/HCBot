@@ -7,28 +7,211 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
 
-type GTResp struct {
-	ID string `json:"id"`
+func AddGamertagToDB(discordID, xblID string) {
+	GlobalLock.Lock()
+	DatabaseMap[discordID] = xblID
+	GlobalLock.Unlock()
+	DirtyDatabase = true
 }
 
-type AchievementsStats struct {
-	CurrentGScore int `json:"currentGamerscore"`
-	TotalGScore   int `json:"totalGamerscore"`
+func CheckComboBreaker(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if comboMsg, exists := currentComboMsgs[m.ChannelID]; exists {
+		if comboMsg != m.Content {
+			str := fmt.Sprintf("<@%s> You broke the combo!! You absolute buffoon!!", m.Author.ID)
+			ReplyToMsg(s, m.Message, str)
+			s.MessageReactionAdd(m.ChannelID, m.ID, "🤡")
+			delete(currentComboMsgs, m.ChannelID)
+		}
+	} else {
+		messages, err := s.ChannelMessages(m.ChannelID, 2, m.ID, "", "")
+		if err != nil || len(messages) != 2 {
+			return
+		}
+
+		participatingUsers := make(map[string]struct{}) // Ugly way of creating a Set data structure
+		participatingUsers[m.Author.ID] = struct{}{}
+		for _, message := range messages {
+			if message.Content != m.Content || message.Content == "" {
+				return
+			}
+
+			// Unique users only
+			if _, exists := participatingUsers[message.Author.ID]; exists {
+				return
+			}
+			participatingUsers[message.Author.ID] = struct{}{}
+		}
+
+		currentComboMsgs[m.ChannelID] = m.Content
+	}
 }
 
-type Game struct {
-	Stats   AchievementsStats `json:"achievement"`
-	TitleID string            `json:"titleId"`
-	Name    string            `json:"name"`
+func CheckTimedAchievs(session *discordgo.Session) {
+	today := time.Now().UTC()
+	if today.Hour() != 9 || today.Minute() != 0 { //@todo: Find a better way to activate at 9 AM UTC
+		return
+	}
+
+	targetChannelID := "984160204440633454" // general-mcc channel ID
+	if timedRole, exists := timedAchievRoles[today.Day()]; exists {
+		session.ChannelMessageSend(targetChannelID,
+			fmt.Sprintf("Remember to grab your <@&%d> achievement today! Simply start up a mission or load into a multiplayer game in %s", timedRole.ID, timedRole.Game))
+	}
+
+	for _, date := range destinationVacationDates {
+		if today.Day() == date.Day && today.Month() == date.Month {
+			session.ChannelMessageSend(targetChannelID,
+				"Remember to grab your <@&990602317575368724> Achievement today! Simply load up a Custom Game on Halo 2 Classic Zanzibar, go to the beach and look at the sign next to the water!")
+			break
+		}
+	}
+
+	for _, date := range elderSignsDates {
+		if today.Day() == date.Day && today.Month() == date.Month {
+			session.ChannelMessageSend(targetChannelID,
+				"Remember to grab your <@&990602348659363850> Achievement today! Simply load up a Custom Game on Halo 3 Valhalla and look at the Sigil on the wall. Remember you need to have looked at 2 different ones for it to unlock!")
+			break
+		}
+	}
+}
+
+func GetAllGuildMembers(s *discordgo.Session, guildID string) []*discordgo.Member {
+	guildMembers, _ := s.GuildMembers(guildID, "", 1000)
+
+	//Discord API can only return a maximum of 1000 members.
+	//To get all the members for guilds that have more than this limit
+	//we check the length of the returned slice and if it's 1000 we try to grab
+	//the next 1000 starting from the last member in the previous request using it's ID,
+	//repeating this until we get a slice with less than 1000.
+	gotAll := len(guildMembers) < 1000
+	for !gotAll {
+		lastID := guildMembers[len(guildMembers)-1].User.ID
+		tempGMembers, _ := s.GuildMembers(guildID, lastID, 1000)
+		if len(tempGMembers) < 1000 {
+			gotAll = true
+		}
+		guildMembers = append(guildMembers, tempGMembers...)
+	}
+
+	return guildMembers
+}
+
+func GetCompletionSymbol(gameCompl bool) string {
+	if gameCompl {
+		return "✅"
+	} else {
+		return "❌"
+	}
 }
 
 type Riddle struct {
 	Question string `json:"riddle"`
 	Answer   string `json:"answer"`
+}
+
+func GetRiddle() (Riddle, error) {
+	resp, err := http.Get("https://riddles-api.vercel.app/random")
+	if err != nil {
+		return Riddle{"", ""}, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	var riddleResp Riddle
+	if err = json.Unmarshal(body, &riddleResp); err != nil {
+		return Riddle{"", ""}, err
+	}
+
+	return riddleResp, err
+}
+
+func HasRole(member *discordgo.Member, roleID string) bool {
+	for _, id := range member.Roles {
+		if id == roleID {
+			return true
+		}
+	}
+
+	return false
+}
+
+func HasRoles(member *discordgo.Member, rolesID []string) map[string]bool {
+	rolesMap := make(map[string]bool)
+	for _, searchID := range rolesID {
+		rolesMap[searchID] = false
+	}
+
+	for _, id := range member.Roles {
+		if _, exists := rolesMap[id]; exists {
+			rolesMap[id] = true
+		}
+	}
+
+	return rolesMap
+}
+
+func IsStaff(member *discordgo.Member) bool {
+	// Pillar / Oracle (Mod) / Guardian (Admin) / Founder roles
+	staffRoles := []string{"987989822813650974", "984081125657964664", "984080972108668959", "1075504782023852102"}
+	result := HasRoles(member, staffRoles)
+	for _, roleID := range staffRoles {
+		if result[roleID] {
+			return true
+		}
+	}
+
+	return false
+}
+
+func LogCommand(cmdName, author string) {
+	fmt.Println(cmdName + " command used - " + author)
+}
+
+// Workaround until OpenXBL API changed for official Xbox API
+func KeepAliveRequest() {
+	req, _ := http.NewRequest("GET", "https://xbl.io/api/v2/account", nil)
+	req.Header.Add("X-Authorization", Tokens.OpenXBL)
+	req.Header.Add("Accept", "application/json")
+
+	client := &http.Client{}
+	resp, _ := client.Do(req)
+	if resp != nil {
+		resp.Body.Close()
+	}
+	//We don't care about the result, we just want to do a GET request on OpenXBL
+	//so our token gets refreshed and future requests after idling won't fail
+}
+
+func ReactFail(s *discordgo.Session, m *discordgo.Message) {
+	s.MessageReactionsRemoveEmoji(m.ChannelID, m.ID, "⚙️")
+	s.MessageReactionAdd(m.ChannelID, m.ID, "❌")
+}
+
+func ReactSuccess(s *discordgo.Session, m *discordgo.Message) {
+	s.MessageReactionsRemoveEmoji(m.ChannelID, m.ID, "⚙️")
+	s.MessageReactionAdd(m.ChannelID, m.ID, "✅")
+}
+
+func ReplyToMsg(s *discordgo.Session, m *discordgo.Message, replyMsg string) (*discordgo.Message, error) {
+	return s.ChannelMessageSendReply(m.ChannelID, replyMsg, &discordgo.MessageReference{
+		MessageID: m.ID,
+		ChannelID: m.ChannelID,
+	})
+}
+
+type Game struct {
+	Name  string `json:"name"`
+	Stats struct {
+		CurrentGScore int `json:"currentGamerscore"`
+		TotalGScore   int `json:"totalGamerscore"`
+	} `json:"achievement"`
+	TitleID string `json:"titleId"`
 }
 
 func RequestPlayerAchievements(discordID string) ([]Game, error) {
@@ -72,6 +255,10 @@ func RequestPlayerAchievements(discordID string) ([]Game, error) {
 	return games, nil
 }
 
+type GTResp struct {
+	ID string `json:"id"`
+}
+
 func RequestPlayerGT(gamerTag string) (string, error) {
 	//Gamertags with a suffix should not include the hashtag
 	urlTag := strings.ReplaceAll(gamerTag, "#", "")
@@ -106,131 +293,4 @@ func RequestPlayerGT(gamerTag string) (string, error) {
 	}
 
 	return respID[0].ID, nil
-}
-
-func GetRiddle() (Riddle, error) {
-	resp, err := http.Get("https://riddles-api.vercel.app/random")
-	if err != nil {
-		return Riddle{"", ""}, err
-	}
-	defer resp.Body.Close()
-
-	body, _ := ioutil.ReadAll(resp.Body)
-
-	var riddleResp Riddle
-	if err = json.Unmarshal(body, &riddleResp); err != nil {
-		return Riddle{"", ""}, err
-	}
-
-	return riddleResp, err
-}
-
-// Workaround until OpenXBL API changed for official Xbox API
-func KeepAliveRequest() {
-	req, _ := http.NewRequest("GET", "https://xbl.io/api/v2/account", nil)
-	req.Header.Add("X-Authorization", Tokens.OpenXBL)
-	req.Header.Add("Accept", "application/json")
-
-	client := &http.Client{}
-	resp, _ := client.Do(req)
-	if resp != nil {
-		resp.Body.Close()
-	}
-	//We don't care about the result, we just want to do a GET request on OpenXBL
-	//so our token gets refreshed and future requests after idling won't fail
-}
-
-func AddGamertagToDB(discordID, xblID string) {
-	GlobalLock.Lock()
-	DatabaseMap[discordID] = xblID
-	GlobalLock.Unlock()
-	DirtyDatabase = true
-}
-
-func HasRole(member *discordgo.Member, roleID string) bool {
-	for _, id := range member.Roles {
-		if id == roleID {
-			return true
-		}
-	}
-
-	return false
-}
-
-func HasRoles(member *discordgo.Member, rolesID []string) map[string]bool {
-	rolesMap := make(map[string]bool)
-	for _, searchID := range rolesID {
-		rolesMap[searchID] = false
-	}
-
-	for _, id := range member.Roles {
-		if _, exists := rolesMap[id]; exists {
-			rolesMap[id] = true
-		}
-	}
-
-	return rolesMap
-}
-
-func IsStaff(member *discordgo.Member) bool {
-	// Pillar / Oracle (Mod) / Guardian (Admin) / Founder roles
-	staffRoles := []string{"987989822813650974", "984081125657964664", "984080972108668959", "1075504782023852102"}
-	result := HasRoles(member, staffRoles)
-	for _, roleID := range staffRoles {
-		if result[roleID] {
-			return true
-		}
-	}
-
-	return false
-}
-
-func GetAllGuildMembers(s *discordgo.Session, guildID string) []*discordgo.Member {
-	guildMembers, _ := s.GuildMembers(guildID, "", 1000)
-
-	//Discord API can only return a maximum of 1000 members.
-	//To get all the members for guilds that have more than this limit
-	//we check the length of the returned slice and if it's 1000 we try to grab
-	//the next 1000 starting from the last member in the previous request using it's ID,
-	//repeating this until we get a slice with less than 1000.
-	gotAll := len(guildMembers) < 1000
-	for !gotAll {
-		lastID := guildMembers[len(guildMembers)-1].User.ID
-		tempGMembers, _ := s.GuildMembers(guildID, lastID, 1000)
-		if len(tempGMembers) < 1000 {
-			gotAll = true
-		}
-		guildMembers = append(guildMembers, tempGMembers...)
-	}
-
-	return guildMembers
-}
-
-func GetCompletionSymbol(gameCompl bool) string {
-	if gameCompl {
-		return "✅"
-	} else {
-		return "❌"
-	}
-}
-
-func ReplyToMsg(s *discordgo.Session, m *discordgo.Message, replyMsg string) (*discordgo.Message, error) {
-	return s.ChannelMessageSendReply(m.ChannelID, replyMsg, &discordgo.MessageReference{
-		MessageID: m.ID,
-		ChannelID: m.ChannelID,
-	})
-}
-
-func ReactSuccess(s *discordgo.Session, m *discordgo.Message) {
-	s.MessageReactionsRemoveEmoji(m.ChannelID, m.ID, "⚙️")
-	s.MessageReactionAdd(m.ChannelID, m.ID, "✅")
-}
-
-func ReactFail(s *discordgo.Session, m *discordgo.Message) {
-	s.MessageReactionsRemoveEmoji(m.ChannelID, m.ID, "⚙️")
-	s.MessageReactionAdd(m.ChannelID, m.ID, "❌")
-}
-
-func LogCommand(cmdName, author string) {
-	fmt.Println(cmdName + " command used - " + author)
 }
