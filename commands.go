@@ -18,7 +18,6 @@ func initMsgCommands() {
 		helpField := discordgo.MessageEmbedField{
 			Name: "Commands Help",
 			Value: `***Only after setting your gamertag once with the /gamertag command:***
-			+mcc - checks if you're eligible for MCC role
 			+infinite - checks if you're eligible for Halo Infinite role
 			+legacy - checks if you're eligible for Legacy Completionist role
 			+modern - checks if you're eligible for Modern Completionist role
@@ -30,63 +29,6 @@ func initMsgCommands() {
 			Fields: []*discordgo.MessageEmbedField{&helpField},
 		}
 		s.ChannelMessageSendEmbed(m.ChannelID, &embed)
-	}
-
-	commands["+mcc"] = func(s *discordgo.Session, m *discordgo.Message) {
-		LogCommand("mcc", m.Author.Username)
-		member, err := s.GuildMember(m.GuildID, m.Author.ID)
-		if err != nil {
-			return
-		}
-
-		rolesMap := HasRoles(member, []string{mccRoleID, mccMasterRoleID, modernRoleID, hcRoleID, fcRoleID})
-
-		if rolesMap[fcRoleID] {
-			ReplyToMsg(s, m, "You've already finished Franchise Completionist, which requires MCC.")
-			return
-		}
-		if rolesMap[hcRoleID] {
-			ReplyToMsg(s, m, "You've already finished Halo Completionist, which replaces MCC.")
-			return
-		}
-		if rolesMap[modernRoleID] {
-			ReplyToMsg(s, m, "You've already finished Modern Completionist, which requires MCC.")
-			return
-		}
-		if rolesMap[mccMasterRoleID] {
-			ReplyToMsg(s, m, "You've already finished MCC Master, which requires more than the MCC 100% role.")
-			return
-		}
-		if rolesMap[mccRoleID] {
-			ReplyToMsg(s, m, "You've already finished MCC.")
-			return
-		}
-
-		s.MessageReactionAdd(m.ChannelID, m.ID, "⚙️")
-		games, err := RequestPlayerAchievements(m.Author.ID)
-		if err != nil {
-			ReactFail(s, m)
-			ReplyToMsg(s, m, err.Error())
-			return
-		}
-
-		for _, game := range games {
-			if game.TitleID == "1144039928" {
-				if game.Stats.CurrentGScore == game.Stats.TotalGScore {
-					ReactSuccess(s, m)
-					ReplyToMsg(s, m, fmt.Sprintf("Hey everyone! %s finished MCC! Congrats!", m.Author.Username))
-					s.GuildMemberRoleAdd(m.GuildID, m.Author.ID, mccRoleID)
-					return
-				} else {
-					ReactFail(s, m)
-					ReplyToMsg(s, m, "Sorry, you haven't finished MCC yet.")
-					return
-				}
-			}
-		}
-
-		ReactFail(s, m)
-		ReplyToMsg(s, m, "You haven't played MCC before.")
 	}
 
 	commands["+infinite"] = func(s *discordgo.Session, m *discordgo.Message) {
@@ -437,18 +379,22 @@ func initSlashCommands(s *discordgo.Session) {
 			},
 		},
 		{
+			Name:        "mcc",
+			Description: "Check if you're eligible for the 100% MCC completion role.",
+		},
+		{
 			Name:        "riddle",
 			Description: "Get a random riddle from the internet",
 		},
 	}
 	for _, command := range slashCommands {
-		_, err := s.ApplicationCommandCreate(s.State.User.ID, hcGuildID, command)
+		_, err := s.ApplicationCommandCreate(s.State.User.ID, hcGuildID, command) // Maybe make it work with any guild?
 		if err != nil {
 			fmt.Println(err)
 		}
 	}
 
-	// Register the handler for each slash command
+	// Create the handler for each slash command
 	slashCommandsHandlers["count"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("count", i.Member.User.Username)
 		rolesToCheck := []string{mccRoleID, infiniteRoleID, modernRoleID, legacyRoleID, lasochistRoleID, mccMasterRoleID, hcRoleID, fcRoleID}
@@ -458,7 +404,7 @@ func initSlashCommands(s *discordgo.Session) {
 			rolesCount[roleID] = 0
 		}
 
-		guildMembers := GetAllGuildMembers(s, hcGuildID)
+		guildMembers := GetAllGuildMembers(s, i.GuildID)
 		for _, member := range guildMembers {
 			rolesMap := HasRoles(member, rolesToCheck)
 			for roleID, hasRole := range rolesMap {
@@ -488,12 +434,7 @@ func initSlashCommands(s *discordgo.Session) {
 			rolesCount[hcRoleID],
 			rolesCount[fcRoleID])
 
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: resultMsg,
-			},
-		})
+		RespondToInteraction(s, i.Interaction, resultMsg)
 	}
 
 	slashCommandsHandlers["gamertag"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -502,22 +443,60 @@ func initSlashCommands(s *discordgo.Session) {
 		gTag := i.ApplicationCommandData().Options[0].StringValue()
 		xuid, err := RequestPlayerGT(gTag)
 		if err != nil {
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: err.Error(),
-				},
-			})
+			RespondToInteraction(s, i.Interaction, err.Error())
 			return
 		}
 
 		AddGamertagToDB(i.Member.User.ID, xuid)
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("Gamertag set to \"%s\".", gTag),
-			},
-		})
+		RespondToInteraction(s, i.Interaction, fmt.Sprintf("Gamertag set to \"%s\".", gTag))
+	}
+
+	slashCommandsHandlers["mcc"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		LogCommand("mcc", i.Member.User.Username)
+
+		rolesMap := HasRoles(i.Member, []string{mccRoleID, mccMasterRoleID, modernRoleID, hcRoleID, fcRoleID})
+		if rolesMap[fcRoleID] {
+			RespondToInteraction(s, i.Interaction, "You've already finished Franchise Completionist, which requires MCC.")
+			return
+		}
+		if rolesMap[hcRoleID] {
+			RespondToInteraction(s, i.Interaction, "You've already finished Halo Completionist, which replaces MCC.")
+			return
+		}
+		if rolesMap[modernRoleID] {
+			RespondToInteraction(s, i.Interaction, "You've already finished Modern Completionist, which requires MCC.")
+			return
+		}
+		if rolesMap[mccMasterRoleID] {
+			RespondToInteraction(s, i.Interaction, "You've already finished MCC Master, which requires more than the MCC 100% role.")
+			return
+		}
+		if rolesMap[mccRoleID] {
+			RespondToInteraction(s, i.Interaction, "You've already finished MCC.")
+			return
+		}
+		RespondACKToInteraction(s, i.Interaction)
+
+		games, err := RequestPlayerAchievements(i.Member.User.ID)
+		if err != nil {
+			RespondFollowUpToInteraction(s, i.Interaction, err.Error())
+			return
+		}
+
+		for _, game := range games {
+			if game.TitleID == "1144039928" {
+				if game.Stats.CurrentGScore == game.Stats.TotalGScore {
+					RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished MCC! Congrats!", i.Member.User.Username))
+					s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, mccRoleID)
+					return
+				} else {
+					RespondFollowUpToInteraction(s, i.Interaction, "Sorry, you haven't finished MCC yet.")
+					return
+				}
+			}
+		}
+
+		RespondFollowUpToInteraction(s, i.Interaction, "You haven't played MCC before.")
 	}
 
 	slashCommandsHandlers["riddle"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -525,23 +504,12 @@ func initSlashCommands(s *discordgo.Session) {
 
 		riddle, err := GetRiddle()
 		if err != nil {
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "Whoops, encountered an error while trying to find a riddle. Sorry!",
-				},
-			})
+			RespondToInteraction(s, i.Interaction, "Whoops, encountered an error while trying to find a riddle. Sorry!")
 			fmt.Println(err)
 			return
 		}
 
-		msgToPrint := riddle.Question + "\n\nAnswer will be revealed in one minute."
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: msgToPrint,
-			},
-		})
+		RespondToInteraction(s, i.Interaction, riddle.Question+"\n\nAnswer will be revealed in one minute.")
 
 		time.Sleep(1 * time.Minute)
 		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{

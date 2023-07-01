@@ -205,6 +205,27 @@ func ReplyToMsg(s *discordgo.Session, m *discordgo.Message, replyMsg string) (*d
 	})
 }
 
+func RespondACKToInteraction(s *discordgo.Session, i *discordgo.Interaction) error {
+	return s.InteractionRespond(i, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+	})
+}
+
+func RespondFollowUpToInteraction(s *discordgo.Session, i *discordgo.Interaction, respondMsg string) (*discordgo.Message, error) {
+	return s.FollowupMessageCreate(i, true, &discordgo.WebhookParams{
+		Content: respondMsg,
+	})
+}
+
+func RespondToInteraction(s *discordgo.Session, i *discordgo.Interaction, respondMsg string) error {
+	return s.InteractionRespond(i, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: respondMsg,
+		},
+	})
+}
+
 type Game struct {
 	Name  string `json:"name"`
 	Stats struct {
@@ -217,7 +238,7 @@ type Game struct {
 func RequestPlayerAchievements(discordID string) ([]Game, error) {
 	xbID, ok := DatabaseMap[discordID]
 	if !ok {
-		return nil, errors.New("Please set your gamertag first using the command `+gt \"gamertag\"`")
+		return nil, errors.New("Please set your gamertag first using the `/gamertag` command")
 	}
 
 	url := "https://xbl.io/api/v2/achievements/player/" + xbID
