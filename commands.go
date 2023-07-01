@@ -8,8 +8,9 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func InitCommands() {
+func InitCommands(s *discordgo.Session) {
 	initMsgCommands()
+	initSlashCommands(s)
 }
 
 func initMsgCommands() {
@@ -19,7 +20,6 @@ func initMsgCommands() {
 			Name: "Commands Help",
 			Value: `+gamertag (or +gt) "gamertag" - sets your gamertag
 			+count - shows number of users with corresponding completion role
-			+riddle - for those that fancy a riddle
 
 			***Only after setting your gamertag once:***
 			+mcc - checks if you're eligible for MCC role
@@ -487,23 +487,51 @@ Note 2: **If you finished everything and played any game on a non-XBL platform, 
 		s.GuildMemberRoleRemove(m.GuildID, m.Author.ID, modernRoleID)
 		s.GuildMemberRoleAdd(m.GuildID, m.Author.ID, hcRoleID)
 	}
+}
 
-	commands["+riddle"] = func(s *discordgo.Session, m *discordgo.Message) {
-		LogCommand("riddle", m.Author.Username)
+func initSlashCommands(s *discordgo.Session) {
+	slashCommands = append(slashCommands, &discordgo.ApplicationCommand{
+		Name:        "riddle",
+		Description: "Get a random riddle from the internet",
+	})
+	for _, command := range slashCommands {
+		_, err := s.ApplicationCommandCreate(s.State.User.ID, hcGuildID, command)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
+	slashCommandsHandlers["riddle"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		LogCommand("riddle", i.Member.User.Username)
 
 		riddle, err := GetRiddle()
 		if err != nil {
-			ReplyToMsg(s, m, "Whoops, encountered an error while trying to find a riddle. Sorry!")
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Whoops, encountered an error while trying to find a riddle. Sorry!",
+				},
+			})
 			fmt.Println(err)
 			return
 		}
 
 		msgToPrint := riddle.Question + "\n\nAnswer will be revealed in one minute."
-		riddleMsg, _ := ReplyToMsg(s, m, msgToPrint)
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: msgToPrint,
+			},
+		})
 
-		riddleTimer := time.NewTimer(1 * time.Minute)
-		<-riddleTimer.C
-		ReplyToMsg(s, riddleMsg, riddle.Answer)
+		time.Sleep(1 * time.Minute)
+		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+			Content: riddle.Answer,
+		})
 	}
-
+	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		if handler, exists := slashCommandsHandlers[i.ApplicationCommandData().Name]; exists {
+			handler(s, i)
+		}
+	})
 }
