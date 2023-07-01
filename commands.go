@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -18,9 +17,7 @@ func initMsgCommands() {
 		LogCommand("help", m.Author.Username)
 		helpField := discordgo.MessageEmbedField{
 			Name: "Commands Help",
-			Value: `+gamertag (or +gt) "gamertag" - sets your gamertag
-
-			***Only after setting your gamertag once:***
+			Value: `***Only after setting your gamertag once with the /gamertag command:***
 			+mcc - checks if you're eligible for MCC role
 			+infinite - checks if you're eligible for Halo Infinite role
 			+legacy - checks if you're eligible for Legacy Completionist role
@@ -34,34 +31,6 @@ func initMsgCommands() {
 		}
 		s.ChannelMessageSendEmbed(m.ChannelID, &embed)
 	}
-
-	gtFunc := func(s *discordgo.Session, m *discordgo.Message) {
-		LogCommand("gt", m.Author.Username)
-		contentSpl := strings.Split(m.Content, " ")[1:]
-		if len(contentSpl) == 0 {
-			ReactFail(s, m)
-			ReplyToMsg(s, m, "Please write your gamertag after the command.")
-			return
-		}
-		s.MessageReactionAdd(m.ChannelID, m.ID, "⚙️")
-
-		gTag := strings.Join(contentSpl, " ")
-		gTag = strings.Trim(gTag, "\"")
-		gTag = strings.Trim(gTag, "“")
-		gTag = strings.Trim(gTag, "”")
-		xuid, err := RequestPlayerGT(gTag)
-		if err != nil {
-			ReactFail(s, m)
-			ReplyToMsg(s, m, err.Error())
-			return
-		}
-
-		AddGamertagToDB(m.Author.ID, xuid)
-		ReactSuccess(s, m)
-		ReplyToMsg(s, m, fmt.Sprintf("Gamertag set to \"%s\".", gTag))
-	}
-	commands["+gt"] = gtFunc
-	commands["+gamertag"] = gtFunc
 
 	commands["+mcc"] = func(s *discordgo.Session, m *discordgo.Message) {
 		LogCommand("mcc", m.Author.Username)
@@ -456,6 +425,18 @@ func initSlashCommands(s *discordgo.Session) {
 			Description: "Show the number of users of each completion role",
 		},
 		{
+			Name:        "gamertag",
+			Description: "Set your gamertag for subsequent completion role commands",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "gamertag",
+					Description: "Your gamertag",
+					Required:    true,
+				},
+			},
+		},
+		{
 			Name:        "riddle",
 			Description: "Get a random riddle from the internet",
 		},
@@ -511,6 +492,30 @@ func initSlashCommands(s *discordgo.Session) {
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: resultMsg,
+			},
+		})
+	}
+
+	slashCommandsHandlers["gamertag"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		LogCommand("gamertag", i.Member.User.Username)
+
+		gTag := i.ApplicationCommandData().Options[0].StringValue()
+		xuid, err := RequestPlayerGT(gTag)
+		if err != nil {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: err.Error(),
+				},
+			})
+			return
+		}
+
+		AddGamertagToDB(i.Member.User.ID, xuid)
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: fmt.Sprintf("Gamertag set to \"%s\".", gTag),
 			},
 		})
 	}
