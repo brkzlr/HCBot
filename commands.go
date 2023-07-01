@@ -19,7 +19,6 @@ func initMsgCommands() {
 		helpField := discordgo.MessageEmbedField{
 			Name: "Commands Help",
 			Value: `+gamertag (or +gt) "gamertag" - sets your gamertag
-			+count - shows number of users with corresponding completion role
 
 			***Only after setting your gamertag once:***
 			+mcc - checks if you're eligible for MCC role
@@ -34,46 +33,6 @@ func initMsgCommands() {
 			Fields: []*discordgo.MessageEmbedField{&helpField},
 		}
 		s.ChannelMessageSendEmbed(m.ChannelID, &embed)
-	}
-
-	commands["+count"] = func(s *discordgo.Session, m *discordgo.Message) {
-		LogCommand("count", m.Author.Username)
-		rolesToCheck := []string{mccRoleID, infiniteRoleID, modernRoleID, legacyRoleID, lasochistRoleID, mccMasterRoleID, hcRoleID, fcRoleID}
-
-		rolesCount := make(map[string]int)
-		for _, roleID := range rolesToCheck {
-			rolesCount[roleID] = 0
-		}
-
-		guildMembers := GetAllGuildMembers(s, m.GuildID)
-		for _, member := range guildMembers {
-			rolesMap := HasRoles(member, rolesToCheck)
-			for roleID, hasRole := range rolesMap {
-				if hasRole {
-					rolesCount[roleID]++
-				}
-			}
-		}
-
-		resultStr := "Number of users with each role:\n" +
-			"MCC:  **%d**\n" +
-			"Infinite:  **%d**\n" +
-			"Modern Completionist:  **%d**\n" +
-			"Legacy Completionist:  **%d**\n" +
-			"Lasochist:  **%d**\n" +
-			"MCC Master:  **%d**\n" +
-			"Halo Completionist:  **%d**\n" +
-			"Franchise Completionist:  **%d**\n"
-
-		ReplyToMsg(s, m, fmt.Sprintf(resultStr,
-			rolesCount[mccRoleID],
-			rolesCount[infiniteRoleID],
-			rolesCount[modernRoleID],
-			rolesCount[legacyRoleID],
-			rolesCount[lasochistRoleID],
-			rolesCount[mccMasterRoleID],
-			rolesCount[hcRoleID],
-			rolesCount[fcRoleID]))
 	}
 
 	gtFunc := func(s *discordgo.Session, m *discordgo.Message) {
@@ -490,15 +449,70 @@ Note 2: **If you finished everything and played any game on a non-XBL platform, 
 }
 
 func initSlashCommands(s *discordgo.Session) {
-	slashCommands = append(slashCommands, &discordgo.ApplicationCommand{
-		Name:        "riddle",
-		Description: "Get a random riddle from the internet",
-	})
+	// Register each slash command to Discord
+	slashCommands = []*discordgo.ApplicationCommand{
+		{
+			Name:        "count",
+			Description: "Show the number of users of each completion role",
+		},
+		{
+			Name:        "riddle",
+			Description: "Get a random riddle from the internet",
+		},
+	}
 	for _, command := range slashCommands {
 		_, err := s.ApplicationCommandCreate(s.State.User.ID, hcGuildID, command)
 		if err != nil {
 			fmt.Println(err)
 		}
+	}
+
+	// Register the handler for each slash command
+	slashCommandsHandlers["count"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		LogCommand("count", i.Member.User.Username)
+		rolesToCheck := []string{mccRoleID, infiniteRoleID, modernRoleID, legacyRoleID, lasochistRoleID, mccMasterRoleID, hcRoleID, fcRoleID}
+
+		rolesCount := make(map[string]int)
+		for _, roleID := range rolesToCheck {
+			rolesCount[roleID] = 0
+		}
+
+		guildMembers := GetAllGuildMembers(s, hcGuildID)
+		for _, member := range guildMembers {
+			rolesMap := HasRoles(member, rolesToCheck)
+			for roleID, hasRole := range rolesMap {
+				if hasRole {
+					rolesCount[roleID]++
+				}
+			}
+		}
+
+		resultStr := "Number of users with each role:\n" +
+			"MCC:  **%d**\n" +
+			"Infinite:  **%d**\n" +
+			"Modern Completionist:  **%d**\n" +
+			"Legacy Completionist:  **%d**\n" +
+			"Lasochist:  **%d**\n" +
+			"MCC Master:  **%d**\n" +
+			"Halo Completionist:  **%d**\n" +
+			"Franchise Completionist:  **%d**\n"
+
+		resultMsg := fmt.Sprintf(resultStr,
+			rolesCount[mccRoleID],
+			rolesCount[infiniteRoleID],
+			rolesCount[modernRoleID],
+			rolesCount[legacyRoleID],
+			rolesCount[lasochistRoleID],
+			rolesCount[mccMasterRoleID],
+			rolesCount[hcRoleID],
+			rolesCount[fcRoleID])
+
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: resultMsg,
+			},
+		})
 	}
 
 	slashCommandsHandlers["riddle"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -529,6 +543,7 @@ func initSlashCommands(s *discordgo.Session) {
 			Content: riddle.Answer,
 		})
 	}
+
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if handler, exists := slashCommandsHandlers[i.ApplicationCommandData().Name]; exists {
 			handler(s, i)
