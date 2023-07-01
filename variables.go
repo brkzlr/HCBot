@@ -3,9 +3,9 @@ package main
 import (
 	"sync"
 	"time"
-)
 
-var GlobalLock sync.Mutex
+	"github.com/bwmarrin/discordgo"
+)
 
 const (
 	mccRoleID       = "985327507274350612"
@@ -21,7 +21,43 @@ const (
 	proofChannelID = "984079675385077820"
 )
 
-var currentComboMsgs = make(map[string]string)
+var (
+	Tokens struct {
+		Discord string `json:"discordToken"`
+		OpenXBL string `json:"xblToken"`
+	}
+
+	commands         = make(map[string]func(s *discordgo.Session, m *discordgo.Message))
+	currentComboMsgs = make(map[string]string)
+
+	DatabaseMap   map[string]string
+	DirtyDatabase bool
+	GlobalLock    sync.Mutex
+)
+
+type RoleDate struct {
+	Day   int
+	Month time.Month
+}
+
+var (
+	destinationVacationDates = [...]RoleDate{
+		{1, time.January},
+		{7, time.July},
+		{31, time.October},
+		{25, time.December},
+	}
+	elderSignsDates = [...]RoleDate{
+		{1, time.January},
+		{22, time.April},
+		{5, time.May},
+		{4, time.July},
+		{7, time.July},
+		{31, time.October},
+		{11, time.November},
+		{25, time.December},
+	}
+)
 
 type TimedRoles struct {
 	ID   int
@@ -36,27 +72,3 @@ var timedAchievRoles = map[int]TimedRoles{
 	22: {990601924703297586, "Halo 3: ODST"},
 	14: {990602198184501268, "Halo: Reach"},
 }
-
-type RoleDate struct {
-	Day   int
-	Month time.Month
-}
-
-var (
-	destinationVacationDates = []RoleDate{
-		{1, time.January},
-		{7, time.July},
-		{31, time.October},
-		{25, time.December},
-	}
-	elderSignsDates = []RoleDate{
-		{1, time.January},
-		{22, time.April},
-		{5, time.May},
-		{4, time.July},
-		{7, time.July},
-		{31, time.October},
-		{11, time.November},
-		{25, time.December},
-	}
-)

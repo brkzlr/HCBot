@@ -8,9 +8,11 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-var commands = make(map[string]func(s *discordgo.Session, m *discordgo.Message))
+func InitCommands() {
+	initMsgCommands()
+}
 
-func init() {
+func initMsgCommands() {
 	commands["+help"] = func(s *discordgo.Session, m *discordgo.Message) {
 		LogCommand("help", m.Author.Username)
 		helpField := discordgo.MessageEmbedField{
@@ -485,6 +487,7 @@ Note 2: **If you finished everything and played any game on a non-XBL platform, 
 		s.GuildMemberRoleRemove(m.GuildID, m.Author.ID, modernRoleID)
 		s.GuildMemberRoleAdd(m.GuildID, m.Author.ID, hcRoleID)
 	}
+
 	commands["+riddle"] = func(s *discordgo.Session, m *discordgo.Message) {
 		LogCommand("riddle", m.Author.Username)
 
