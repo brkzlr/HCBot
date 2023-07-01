@@ -19,6 +19,8 @@ const (
 
 	botChannelID   = "984075793904848916"
 	proofChannelID = "984079675385077820"
+
+	hcGuildID = "984075026816991252"
 )
 
 var (
@@ -27,12 +29,14 @@ var (
 		OpenXBL string `json:"xblToken"`
 	}
 
-	commands         = make(map[string]func(s *discordgo.Session, m *discordgo.Message))
-	currentComboMsgs = make(map[string]string)
+	commands              = make(map[string]func(s *discordgo.Session, m *discordgo.Message))
+	slashCommandsHandlers = make(map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate))
+	currentComboMsgs      = make(map[string]string)
 
 	DatabaseMap   map[string]string
 	DirtyDatabase bool
 	GlobalLock    sync.Mutex
+	slashCommands []*discordgo.ApplicationCommand
 )
 
 type RoleDate struct {

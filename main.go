@@ -70,7 +70,6 @@ func main() {
 
 	discord.Identify.Intents = discordgo.IntentsAllWithoutPrivileged | discordgo.IntentGuildMembers | discordgo.IntentMessageContent
 	discord.AddHandler(messageCreate)
-	InitCommands()
 
 	err = discord.Open()
 	if err != nil {
@@ -79,6 +78,9 @@ func main() {
 	}
 	defer discord.Close()
 	fmt.Println("Bot is now running!")
+
+	InitCommands(discord)
+	fmt.Println("Commands initialised!")
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
@@ -97,6 +99,13 @@ func main() {
 			CheckTimedAchievs(discord)
 		case <-sc:
 			loop = false
+		}
+	}
+
+	// Delete all application (slash) commands
+	if registeredCommands, err := discord.ApplicationCommands(discord.State.User.ID, hcGuildID); err == nil {
+		for _, cmd := range registeredCommands {
+			discord.ApplicationCommandDelete(discord.State.User.ID, hcGuildID, cmd.ID)
 		}
 	}
 	saveDatabase()
