@@ -7,38 +7,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func checkComboBreaker(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if comboMsg, exists := currentComboMsgs[m.ChannelID]; exists {
-		if comboMsg != m.Content {
-			str := fmt.Sprintf("<@%s> You broke the combo!! You absolute buffoon!!", m.Author.ID)
-			ReplyToMsg(s, m.Message, str)
-			s.MessageReactionAdd(m.ChannelID, m.ID, "🤡")
-			delete(currentComboMsgs, m.ChannelID)
-		}
-	} else {
-		messages, err := s.ChannelMessages(m.ChannelID, 2, m.ID, "", "")
-		if err != nil || len(messages) != 2 {
-			return
-		}
-
-		participatingUsers := make(map[string]struct{}) // Ugly way of creating a Set data structure
-		participatingUsers[m.Author.ID] = struct{}{}
-		for _, message := range messages {
-			if message.Content != m.Content || message.Content == "" {
-				return
-			}
-
-			// Unique users only
-			if _, exists := participatingUsers[message.Author.ID]; exists {
-				return
-			}
-			participatingUsers[message.Author.ID] = struct{}{}
-		}
-
-		currentComboMsgs[m.ChannelID] = m.Content
-	}
-}
-
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
@@ -100,7 +68,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	if !strings.HasPrefix(m.Content, "+") {
-		checkComboBreaker(s, m)
+		CheckComboBreaker(s, m)
 		return
 	}
 	cmdContent := strings.Split(m.Content, " ")
