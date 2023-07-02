@@ -8,358 +8,6 @@ import (
 )
 
 func InitCommands(s *discordgo.Session) {
-	initMsgCommands()
-	initSlashCommands(s)
-}
-
-func initMsgCommands() {
-	commands["+help"] = func(s *discordgo.Session, m *discordgo.Message) {
-		LogCommand("help", m.Author.Username)
-		helpField := discordgo.MessageEmbedField{
-			Name: "Commands Help",
-			Value: `***Only after setting your gamertag once with the /gamertag command:***
-			+infinite - checks if you're eligible for Halo Infinite role
-			+legacy - checks if you're eligible for Legacy Completionist role
-			+modern - checks if you're eligible for Modern Completionist role
-			+hc - checks if you're eligible for Halo Completionist role`,
-			Inline: true,
-		}
-		embed := discordgo.MessageEmbed{
-			Color:  0x5662f6,
-			Fields: []*discordgo.MessageEmbedField{&helpField},
-		}
-		s.ChannelMessageSendEmbed(m.ChannelID, &embed)
-	}
-
-	commands["+infinite"] = func(s *discordgo.Session, m *discordgo.Message) {
-		LogCommand("infinite", m.Author.Username)
-		member, err := s.GuildMember(m.GuildID, m.Author.ID)
-		if err != nil {
-			return
-		}
-
-		rolesMap := HasRoles(member, []string{infiniteRoleID, modernRoleID, hcRoleID, fcRoleID})
-
-		if rolesMap[fcRoleID] {
-			ReplyToMsg(s, m, "You've already finished Franchise Completionist, which requires Halo Infinite.")
-			return
-		}
-		if rolesMap[hcRoleID] {
-			ReplyToMsg(s, m, "You've already finished Halo Completionist, which requires Halo Infinite.")
-			return
-		}
-		if rolesMap[modernRoleID] {
-			ReplyToMsg(s, m, "You've already finished Modern Completionist, which requires Halo Infinite.")
-			return
-		}
-		if rolesMap[infiniteRoleID] {
-			ReplyToMsg(s, m, "You've already finished Halo Infinite.")
-			return
-		}
-
-		s.MessageReactionAdd(m.ChannelID, m.ID, "⚙️")
-		games, err := RequestPlayerAchievements(m.Author.ID)
-		if err != nil {
-			ReactFail(s, m)
-			ReplyToMsg(s, m, err.Error())
-			return
-		}
-
-		for _, game := range games {
-			if game.Name == "Halo Infinite" {
-				if game.Stats.CurrentGScore == game.Stats.TotalGScore {
-					ReactSuccess(s, m)
-					ReplyToMsg(s, m, fmt.Sprintf("Hey everyone! %s finished Halo Infinite! Congrats!", m.Author.Username))
-					s.GuildMemberRoleAdd(m.GuildID, m.Author.ID, infiniteRoleID)
-					return
-				} else {
-					ReactFail(s, m)
-					ReplyToMsg(s, m, "Sorry, you haven't finished Halo Infinite yet.")
-					return
-				}
-			}
-		}
-
-		ReactFail(s, m)
-		ReplyToMsg(s, m, "You haven't played Halo Infinite before.")
-	}
-
-	commands["+legacy"] = func(s *discordgo.Session, m *discordgo.Message) {
-		LogCommand("legacy", m.Author.Username)
-		member, err := s.GuildMember(m.GuildID, m.Author.ID)
-		if err != nil {
-			return
-		}
-
-		rolesMap := HasRoles(member, []string{legacyRoleID, fcRoleID})
-
-		if rolesMap[fcRoleID] {
-			ReplyToMsg(s, m, "You've already finished Franchise Completionist, which replaces Legacy Completionist.")
-			return
-		}
-		if rolesMap[legacyRoleID] {
-			ReplyToMsg(s, m, "You've already finished Legacy Completionist.")
-			return
-		}
-
-		s.MessageReactionAdd(m.ChannelID, m.ID, "⚙️")
-		games, err := RequestPlayerAchievements(m.Author.ID)
-		if err != nil {
-			ReactFail(s, m)
-			ReplyToMsg(s, m, err.Error())
-			return
-		}
-
-		completionMap := map[string]bool{
-			"Halo: Combat Evolved Anniversary": false,
-			"Halo 3":                           false,
-			"Halo Wars":                        false,
-			"Halo 3: ODST Campaign Edition":    false,
-			"Halo: Reach":                      false,
-			"Halo 4":                           false,
-		}
-		for _, game := range games {
-			if _, exists := completionMap[game.Name]; exists {
-				completionMap[game.Name] = (game.Stats.CurrentGScore == game.Stats.TotalGScore)
-			}
-		}
-
-		for _, isDone := range completionMap {
-			if !isDone {
-				ReactFail(s, m)
-				failMsg := `Here's your progress on the Legacy Completionist games:
-**Halo Combat Evolved Anniversary** : %s
-**Halo 3** : %s
-**Halo Wars** : %s
-**Halo 3 ODST** : %s
-**Halo Reach** : %s
-**Halo 4** : %s`
-				failMsg = fmt.Sprintf(failMsg,
-					GetCompletionSymbol(completionMap["Halo: Combat Evolved Anniversary"]),
-					GetCompletionSymbol(completionMap["Halo 3"]),
-					GetCompletionSymbol(completionMap["Halo Wars"]),
-					GetCompletionSymbol(completionMap["Halo 3: ODST Campaign Edition"]),
-					GetCompletionSymbol(completionMap["Halo: Reach"]),
-					GetCompletionSymbol(completionMap["Halo 4"]),
-				)
-				ReplyToMsg(s, m, failMsg)
-				return
-			}
-		}
-
-		ReactSuccess(s, m)
-		ReplyToMsg(s, m, fmt.Sprintf("Hey everyone! %s finished Legacy Completionist! Congrats!", m.Author.Username))
-		s.GuildMemberRoleAdd(m.GuildID, m.Author.ID, legacyRoleID)
-	}
-
-	commands["+modern"] = func(s *discordgo.Session, m *discordgo.Message) {
-		LogCommand("modern", m.Author.Username)
-		member, err := s.GuildMember(m.GuildID, m.Author.ID)
-		if err != nil {
-			return
-		}
-
-		rolesMap := HasRoles(member, []string{modernRoleID, hcRoleID, fcRoleID})
-
-		if rolesMap[fcRoleID] {
-			ReplyToMsg(s, m, "You've already finished Franchise Completionist, which replaces Modern Completionist.")
-			return
-		}
-		if rolesMap[hcRoleID] {
-			ReplyToMsg(s, m, "You've already finished Halo Completionist, which replaces Modern Completionist.")
-			return
-		}
-		if rolesMap[modernRoleID] {
-			ReplyToMsg(s, m, "You've already finished Modern Completionist.")
-			return
-		}
-
-		s.MessageReactionAdd(m.ChannelID, m.ID, "⚙️")
-		games, err := RequestPlayerAchievements(m.Author.ID)
-		if err != nil {
-			ReactFail(s, m)
-			ReplyToMsg(s, m, err.Error())
-			return
-		}
-
-		completionMap := map[string]bool{
-			"Halo: The Master Chief Collection":  false,
-			"Halo 5: Guardians":                  false,
-			"Halo Wars: Definitive Edition (PC)": false,
-			"Halo Wars 2":                        false,
-			"Halo Infinite":                      false,
-		}
-		for _, game := range games {
-			if completion, exists := completionMap[game.Name]; exists && !completion {
-				// Some games like MCC & MCC China have the same XBL name so we don't want to replace
-				// a true completion with a false completion which is why we check !completion
-				completionMap[game.Name] = (game.Stats.CurrentGScore == game.Stats.TotalGScore)
-			}
-		}
-
-		for _, isDone := range completionMap {
-			if !isDone {
-				ReactFail(s, m)
-				failMsg := `Here's your progress on the Modern Completionist games:
-**Halo MCC** : %s
-**Halo 5 Guardians** : %s
-**Halo Wars Definitive Edition** : %s
-**Halo Wars 2** : %s
-**Halo Infinite** : %s
-
-Note: **If you finished everything and played any game on a non-XBL platform, please ping a staff member with screenshot proof in <#984079675385077820>.**`
-				failMsg = fmt.Sprintf(failMsg,
-					GetCompletionSymbol(completionMap["Halo: The Master Chief Collection"]),
-					GetCompletionSymbol(completionMap["Halo 5: Guardians"]),
-					GetCompletionSymbol(completionMap["Halo Wars: Definitive Edition (PC)"]),
-					GetCompletionSymbol(completionMap["Halo Wars 2"]),
-					GetCompletionSymbol(completionMap["Halo Infinite"]),
-				)
-				ReplyToMsg(s, m, failMsg)
-				return
-			}
-		}
-
-		ReactSuccess(s, m)
-		ReplyToMsg(s, m, fmt.Sprintf("Hey everyone! %s finished Modern Completionist! Congrats!", m.Author.Username))
-		s.GuildMemberRoleRemove(m.GuildID, m.Author.ID, mccRoleID)
-		s.GuildMemberRoleRemove(m.GuildID, m.Author.ID, infiniteRoleID)
-		s.GuildMemberRoleAdd(m.GuildID, m.Author.ID, modernRoleID)
-	}
-
-	commands["+hc"] = func(s *discordgo.Session, m *discordgo.Message) {
-		LogCommand("hc", m.Author.Username)
-		member, err := s.GuildMember(m.GuildID, m.Author.ID)
-		if err != nil {
-			return
-		}
-
-		rolesMap := HasRoles(member, []string{hcRoleID, fcRoleID})
-
-		if rolesMap[fcRoleID] {
-			ReplyToMsg(s, m, "You've already finished Franchise Completionist, which replaces Halo Completionist.")
-			return
-		}
-		if rolesMap[hcRoleID] {
-			ReplyToMsg(s, m, "You've already finished Halo Completionist.")
-			return
-		}
-
-		s.MessageReactionAdd(m.ChannelID, m.ID, "⚙️")
-		games, err := RequestPlayerAchievements(m.Author.ID)
-		if err != nil {
-			ReactFail(s, m)
-			ReplyToMsg(s, m, err.Error())
-			return
-		}
-
-		completionMap := map[string]bool{
-			"Halo: The Master Chief Collection":  false,
-			"Halo Wars":                          false,
-			"Halo Wars: Definitive Edition (PC)": false,
-			"Halo Wars 2":                        false,
-			"Halo: Spartan Strike":               false,
-			"Halo: Spartan Assault":              false,
-			"Halo Infinite":                      false,
-			"Halo 5: Guardians":                  false,
-			"Halo 5: Forge":                      false,
-		}
-		classicCompletionMap := map[string]bool{
-			"Halo: Combat Evolved Anniversary": false,
-			"Halo 2 (PC)":                      false,
-			"Halo 3":                           false,
-			"Halo 3: ODST Campaign Edition":    false,
-			"Halo: Reach":                      false,
-			"Halo 4":                           false,
-		}
-
-		for _, game := range games {
-			if completion, exists := completionMap[game.Name]; exists && !completion {
-				isBugged := game.Stats.TotalGScore == 0 // Some games like SS and SA are bugged
-
-				// Some games like MCC & MCC China (or SS/SA in this case)
-				// have the same XBL name so we don't want to replace
-				// a true completion with a false completion which is why we check !completion
-				completionMap[game.Name] = (game.Stats.CurrentGScore == game.Stats.TotalGScore) && !isBugged
-			}
-
-			if _, exists := classicCompletionMap[game.Name]; exists {
-				classicCompletionMap[game.Name] = (game.Stats.CurrentGScore == game.Stats.TotalGScore)
-			}
-		}
-
-		classicDone := true
-		for _, isDone := range classicCompletionMap {
-			if !isDone {
-				classicDone = false
-				break
-			}
-		}
-
-		for gameName, isDone := range completionMap {
-			if !isDone {
-				if gameName == "Halo: The Master Chief Collection" && classicDone {
-					continue
-				}
-				if gameName == "Halo Wars" || gameName == "Halo Wars: Definitive Edition (PC)" {
-					if completionMap["Halo Wars"] || completionMap["Halo Wars: Definitive Edition (PC)"] {
-						//Just one of these is necessary
-						continue
-					}
-				}
-				ReactFail(s, m)
-				failMsg := `Here's your progress on the Halo Completionist games:
-**Halo MCC** : %s
-**Halo Wars Definitive Edition** : %s  or  **Halo Wars** : %s
-**Halo 5 Guardians** : %s
-**Halo 5 Forge** : %s
-**Halo Spartan Assault** : %s
-**Halo Spartan Strike** : %s
-**Halo Wars 2** : %s
-**Halo Infinite** : %s
-
-Instead of **Halo MCC**, you can do:
-**Halo Combat Evolved Anniversary** : %s
-**Halo 2 (Vista)** : %s
-**Halo 3** : %s
-**Halo 3 ODST** : %s
-**Halo Reach** : %s
-**Halo 4** : %s
-
-Note 1: **If your SA/SS completion is not correct, those achievements might be bugged. Ping a staff member with screenshot proof in <#984079675385077820> if it blocks you from obtaining the role**
-Note 2: **If you finished everything and played any game on a non-XBL platform, please ping a staff member with screenshot proof in <#984079675385077820>.**`
-				failMsg = fmt.Sprintf(failMsg,
-					GetCompletionSymbol(completionMap["Halo: The Master Chief Collection"]),
-					GetCompletionSymbol(completionMap["Halo Wars: Definitive Edition (PC)"]),
-					GetCompletionSymbol(completionMap["Halo Wars"]),
-					GetCompletionSymbol(completionMap["Halo 5: Guardians"]),
-					GetCompletionSymbol(completionMap["Halo 5: Forge"]),
-					GetCompletionSymbol(completionMap["Halo: Spartan Assault"]),
-					GetCompletionSymbol(completionMap["Halo: Spartan Strike"]),
-					GetCompletionSymbol(completionMap["Halo Wars 2"]),
-					GetCompletionSymbol(completionMap["Halo Infinite"]),
-					GetCompletionSymbol(classicCompletionMap["Halo: Combat Evolved Anniversary"]),
-					GetCompletionSymbol(classicCompletionMap["Halo 2 (PC)"]),
-					GetCompletionSymbol(classicCompletionMap["Halo 3"]),
-					GetCompletionSymbol(classicCompletionMap["Halo 3: ODST Campaign Edition"]),
-					GetCompletionSymbol(classicCompletionMap["Halo: Reach"]),
-					GetCompletionSymbol(classicCompletionMap["Halo 4"]),
-				)
-				ReplyToMsg(s, m, failMsg)
-				return
-			}
-		}
-
-		ReactSuccess(s, m)
-		ReplyToMsg(s, m, fmt.Sprintf("Hey everyone! %s finished Halo Completionist! Congrats!", m.Author.Username))
-		s.GuildMemberRoleRemove(m.GuildID, m.Author.ID, mccRoleID)
-		s.GuildMemberRoleRemove(m.GuildID, m.Author.ID, infiniteRoleID)
-		s.GuildMemberRoleRemove(m.GuildID, m.Author.ID, modernRoleID)
-		s.GuildMemberRoleAdd(m.GuildID, m.Author.ID, hcRoleID)
-	}
-}
-
-func initSlashCommands(s *discordgo.Session) {
 	// Register each slash command to Discord
 	slashCommands = []*discordgo.ApplicationCommand{
 		{
@@ -380,18 +28,32 @@ func initSlashCommands(s *discordgo.Session) {
 		},
 		{
 			Name:        "mcc",
-			Description: "Check if you're eligible for the 100% MCC completion role.",
+			Description: "Check if you're eligible for the MCC 100% completion role.",
+		},
+		{
+			Name:        "infinite",
+			Description: "Check if you're eligible for the Infinite 100% completion role.",
+		},
+		{
+			Name:        "legacy",
+			Description: "Check if you're eligible for the Legacy Completionist role.",
+		},
+		{
+			Name:        "modern",
+			Description: "Check if you're eligible for the Modern Completionist role.",
+		},
+		{
+			Name:        "hc",
+			Description: "Check if you're eligible for the Halo Completionist role.",
 		},
 		{
 			Name:        "riddle",
 			Description: "Get a random riddle from the internet",
 		},
 	}
-	for _, command := range slashCommands {
-		_, err := s.ApplicationCommandCreate(s.State.User.ID, hcGuildID, command) // Maybe make it work with any guild?
-		if err != nil {
-			fmt.Println(err)
-		}
+	_, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, hcGuildID, slashCommands)
+	if err != nil {
+		fmt.Println(err)
 	}
 
 	// Create the handler for each slash command
@@ -497,6 +159,300 @@ func initSlashCommands(s *discordgo.Session) {
 		}
 
 		RespondFollowUpToInteraction(s, i.Interaction, "You haven't played MCC before.")
+	}
+
+	slashCommandsHandlers["infinite"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		LogCommand("infinite", i.Member.User.Username)
+
+		rolesMap := HasRoles(i.Member, []string{infiniteRoleID, modernRoleID, hcRoleID, fcRoleID})
+		if rolesMap[fcRoleID] {
+			RespondToInteraction(s, i.Interaction, "You've already finished Franchise Completionist, which requires Halo Infinite.")
+			return
+		}
+		if rolesMap[hcRoleID] {
+			RespondToInteraction(s, i.Interaction, "You've already finished Halo Completionist, which requires Halo Infinite.")
+			return
+		}
+		if rolesMap[modernRoleID] {
+			RespondToInteraction(s, i.Interaction, "You've already finished Modern Completionist, which requires Halo Infinite.")
+			return
+		}
+		if rolesMap[infiniteRoleID] {
+			RespondToInteraction(s, i.Interaction, "You've already finished Halo Infinite.")
+			return
+		}
+		RespondACKToInteraction(s, i.Interaction)
+
+		games, err := RequestPlayerAchievements(i.Member.User.ID)
+		if err != nil {
+			RespondFollowUpToInteraction(s, i.Interaction, err.Error())
+			return
+		}
+
+		for _, game := range games {
+			if game.Name == "Halo Infinite" {
+				if game.Stats.CurrentGScore == game.Stats.TotalGScore {
+					RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished Halo Infinite! Congrats!", i.Member.User.Username))
+					s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, infiniteRoleID)
+					return
+				} else {
+					RespondFollowUpToInteraction(s, i.Interaction, "Sorry, you haven't finished Halo Infinite yet.")
+					return
+				}
+			}
+		}
+
+		RespondFollowUpToInteraction(s, i.Interaction, "You haven't played Halo Infinite before.")
+	}
+
+	slashCommandsHandlers["legacy"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		LogCommand("legacy", i.Member.User.Username)
+
+		rolesMap := HasRoles(i.Member, []string{legacyRoleID, fcRoleID})
+		if rolesMap[fcRoleID] {
+			RespondToInteraction(s, i.Interaction, "You've already finished Franchise Completionist, which replaces Legacy Completionist.")
+			return
+		}
+		if rolesMap[legacyRoleID] {
+			RespondToInteraction(s, i.Interaction, "You've already finished Legacy Completionist.")
+			return
+		}
+		RespondACKToInteraction(s, i.Interaction)
+
+		games, err := RequestPlayerAchievements(i.Member.User.ID)
+		if err != nil {
+			RespondFollowUpToInteraction(s, i.Interaction, err.Error())
+			return
+		}
+
+		completionMap := map[string]bool{
+			"Halo: Combat Evolved Anniversary": false,
+			"Halo 3":                           false,
+			"Halo Wars":                        false,
+			"Halo 3: ODST Campaign Edition":    false,
+			"Halo: Reach":                      false,
+			"Halo 4":                           false,
+		}
+		for _, game := range games {
+			if _, exists := completionMap[game.Name]; exists {
+				completionMap[game.Name] = (game.Stats.CurrentGScore == game.Stats.TotalGScore)
+			}
+		}
+
+		for _, isDone := range completionMap {
+			if !isDone {
+				failMsg := `Here's your progress on the Legacy Completionist games:
+**Halo Combat Evolved Anniversary** : %s
+**Halo 3** : %s
+**Halo Wars** : %s
+**Halo 3 ODST** : %s
+**Halo Reach** : %s
+**Halo 4** : %s`
+				failMsg = fmt.Sprintf(failMsg,
+					GetCompletionSymbol(completionMap["Halo: Combat Evolved Anniversary"]),
+					GetCompletionSymbol(completionMap["Halo 3"]),
+					GetCompletionSymbol(completionMap["Halo Wars"]),
+					GetCompletionSymbol(completionMap["Halo 3: ODST Campaign Edition"]),
+					GetCompletionSymbol(completionMap["Halo: Reach"]),
+					GetCompletionSymbol(completionMap["Halo 4"]),
+				)
+				RespondFollowUpToInteraction(s, i.Interaction, failMsg)
+				return
+			}
+		}
+
+		RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished Legacy Completionist! Congrats!", i.Member.User.Username))
+		s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, legacyRoleID)
+	}
+
+	slashCommandsHandlers["modern"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		LogCommand("modern", i.Member.User.Username)
+
+		rolesMap := HasRoles(i.Member, []string{modernRoleID, hcRoleID, fcRoleID})
+		if rolesMap[fcRoleID] {
+			RespondToInteraction(s, i.Interaction, "You've already finished Franchise Completionist, which replaces Modern Completionist.")
+			return
+		}
+		if rolesMap[hcRoleID] {
+			RespondToInteraction(s, i.Interaction, "You've already finished Halo Completionist, which replaces Modern Completionist.")
+			return
+		}
+		if rolesMap[modernRoleID] {
+			RespondToInteraction(s, i.Interaction, "You've already finished Modern Completionist.")
+			return
+		}
+		RespondACKToInteraction(s, i.Interaction)
+
+		games, err := RequestPlayerAchievements(i.Member.User.ID)
+		if err != nil {
+			RespondFollowUpToInteraction(s, i.Interaction, err.Error())
+			return
+		}
+
+		completionMap := map[string]bool{
+			"Halo: The Master Chief Collection":  false,
+			"Halo 5: Guardians":                  false,
+			"Halo Wars: Definitive Edition (PC)": false,
+			"Halo Wars 2":                        false,
+			"Halo Infinite":                      false,
+		}
+		for _, game := range games {
+			if completion, exists := completionMap[game.Name]; exists && !completion {
+				// Some games like MCC & MCC China have the same XBL name so we don't want to replace
+				// a true completion with a false completion which is why we check !completion
+				completionMap[game.Name] = (game.Stats.CurrentGScore == game.Stats.TotalGScore)
+			}
+		}
+
+		for _, isDone := range completionMap {
+			if !isDone {
+				failMsg := `Here's your progress on the Modern Completionist games:
+**Halo MCC** : %s
+**Halo 5 Guardians** : %s
+**Halo Wars Definitive Edition** : %s
+**Halo Wars 2** : %s
+**Halo Infinite** : %s
+
+Note: **If you finished everything and played any game on a non-XBL platfori.Interaction, please ping a staff member with screenshot proof in <#984079675385077820>.**`
+				failMsg = fmt.Sprintf(failMsg,
+					GetCompletionSymbol(completionMap["Halo: The Master Chief Collection"]),
+					GetCompletionSymbol(completionMap["Halo 5: Guardians"]),
+					GetCompletionSymbol(completionMap["Halo Wars: Definitive Edition (PC)"]),
+					GetCompletionSymbol(completionMap["Halo Wars 2"]),
+					GetCompletionSymbol(completionMap["Halo Infinite"]),
+				)
+				RespondFollowUpToInteraction(s, i.Interaction, failMsg)
+				return
+			}
+		}
+
+		RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished Modern Completionist! Congrats!", i.Member.User.Username))
+		s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, mccRoleID)
+		s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, infiniteRoleID)
+		s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, modernRoleID)
+	}
+
+	slashCommandsHandlers["hc"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		LogCommand("hc", i.Member.User.Username)
+
+		rolesMap := HasRoles(i.Member, []string{hcRoleID, fcRoleID})
+		if rolesMap[fcRoleID] {
+			RespondToInteraction(s, i.Interaction, "You've already finished Franchise Completionist, which replaces Halo Completionist.")
+			return
+		}
+		if rolesMap[hcRoleID] {
+			RespondToInteraction(s, i.Interaction, "You've already finished Halo Completionist.")
+			return
+		}
+		RespondACKToInteraction(s, i.Interaction)
+
+		games, err := RequestPlayerAchievements(i.Member.User.ID)
+		if err != nil {
+			RespondFollowUpToInteraction(s, i.Interaction, err.Error())
+			return
+		}
+
+		completionMap := map[string]bool{
+			"Halo: The Master Chief Collection":  false,
+			"Halo Wars":                          false,
+			"Halo Wars: Definitive Edition (PC)": false,
+			"Halo Wars 2":                        false,
+			"Halo: Spartan Strike":               false,
+			"Halo: Spartan Assault":              false,
+			"Halo Infinite":                      false,
+			"Halo 5: Guardians":                  false,
+			"Halo 5: Forge":                      false,
+		}
+		classicCompletionMap := map[string]bool{
+			"Halo: Combat Evolved Anniversary": false,
+			"Halo 2 (PC)":                      false,
+			"Halo 3":                           false,
+			"Halo 3: ODST Campaign Edition":    false,
+			"Halo: Reach":                      false,
+			"Halo 4":                           false,
+		}
+
+		for _, game := range games {
+			if completion, exists := completionMap[game.Name]; exists && !completion {
+				isBugged := game.Stats.TotalGScore == 0 // Some games like SS and SA are bugged
+
+				// Some games like MCC & MCC China (or SS/SA in this case)
+				// have the same XBL name so we don't want to replace
+				// a true completion with a false completion which is why we check !completion
+				completionMap[game.Name] = (game.Stats.CurrentGScore == game.Stats.TotalGScore) && !isBugged
+			}
+
+			if _, exists := classicCompletionMap[game.Name]; exists {
+				classicCompletionMap[game.Name] = (game.Stats.CurrentGScore == game.Stats.TotalGScore)
+			}
+		}
+
+		classicDone := true
+		for _, isDone := range classicCompletionMap {
+			if !isDone {
+				classicDone = false
+				break
+			}
+		}
+
+		for gameName, isDone := range completionMap {
+			if !isDone {
+				if gameName == "Halo: The Master Chief Collection" && classicDone {
+					continue
+				}
+				if gameName == "Halo Wars" || gameName == "Halo Wars: Definitive Edition (PC)" {
+					if completionMap["Halo Wars"] || completionMap["Halo Wars: Definitive Edition (PC)"] {
+						//Just one of these is necessary
+						continue
+					}
+				}
+				failMsg := `Here's your progress on the Halo Completionist games:
+**Halo MCC** : %s
+**Halo Wars Definitive Edition** : %s  or  **Halo Wars** : %s
+**Halo 5 Guardians** : %s
+**Halo 5 Forge** : %s
+**Halo Spartan Assault** : %s
+**Halo Spartan Strike** : %s
+**Halo Wars 2** : %s
+**Halo Infinite** : %s
+
+Instead of **Halo MCC**, you can do:
+**Halo Combat Evolved Anniversary** : %s
+**Halo 2 (Vista)** : %s
+**Halo 3** : %s
+**Halo 3 ODST** : %s
+**Halo Reach** : %s
+**Halo 4** : %s
+
+Note 1: **If your SA/SS completion is not correct, those achievements might be bugged. Ping a staff member with screenshot proof in <#984079675385077820> if it blocks you from obtaining the role**
+Note 2: **If you finished everything and played any game on a non-XBL platfori.Interaction, please ping a staff member with screenshot proof in <#984079675385077820>.**`
+				failMsg = fmt.Sprintf(failMsg,
+					GetCompletionSymbol(completionMap["Halo: The Master Chief Collection"]),
+					GetCompletionSymbol(completionMap["Halo Wars: Definitive Edition (PC)"]),
+					GetCompletionSymbol(completionMap["Halo Wars"]),
+					GetCompletionSymbol(completionMap["Halo 5: Guardians"]),
+					GetCompletionSymbol(completionMap["Halo 5: Forge"]),
+					GetCompletionSymbol(completionMap["Halo: Spartan Assault"]),
+					GetCompletionSymbol(completionMap["Halo: Spartan Strike"]),
+					GetCompletionSymbol(completionMap["Halo Wars 2"]),
+					GetCompletionSymbol(completionMap["Halo Infinite"]),
+					GetCompletionSymbol(classicCompletionMap["Halo: Combat Evolved Anniversary"]),
+					GetCompletionSymbol(classicCompletionMap["Halo 2 (PC)"]),
+					GetCompletionSymbol(classicCompletionMap["Halo 3"]),
+					GetCompletionSymbol(classicCompletionMap["Halo 3: ODST Campaign Edition"]),
+					GetCompletionSymbol(classicCompletionMap["Halo: Reach"]),
+					GetCompletionSymbol(classicCompletionMap["Halo 4"]),
+				)
+				RespondFollowUpToInteraction(s, i.Interaction, failMsg)
+				return
+			}
+		}
+
+		RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished Halo Completionist! Congrats!", i.Member.User.Username))
+		s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, mccRoleID)
+		s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, infiniteRoleID)
+		s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, modernRoleID)
+		s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, hcRoleID)
 	}
 
 	slashCommandsHandlers["riddle"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {

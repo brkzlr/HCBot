@@ -13,10 +13,10 @@ import (
 )
 
 func AddGamertagToDB(discordID, xblID string) {
-	GlobalLock.Lock()
-	DatabaseMap[discordID] = xblID
-	GlobalLock.Unlock()
-	DirtyDatabase = true
+	globalLock.Lock()
+	databaseMap[discordID] = xblID
+	globalLock.Unlock()
+	dirtyDatabase = true
 }
 
 func CheckComboBreaker(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -176,7 +176,7 @@ func LogCommand(cmdName, author string) {
 // Workaround until OpenXBL API changed for official Xbox API
 func KeepAliveRequest() {
 	req, _ := http.NewRequest("GET", "https://xbl.io/api/v2/account", nil)
-	req.Header.Add("X-Authorization", Tokens.OpenXBL)
+	req.Header.Add("X-Authorization", tokens.OpenXBL)
 	req.Header.Add("Accept", "application/json")
 
 	client := &http.Client{}
@@ -186,16 +186,6 @@ func KeepAliveRequest() {
 	}
 	//We don't care about the result, we just want to do a GET request on OpenXBL
 	//so our token gets refreshed and future requests after idling won't fail
-}
-
-func ReactFail(s *discordgo.Session, m *discordgo.Message) {
-	s.MessageReactionsRemoveEmoji(m.ChannelID, m.ID, "⚙️")
-	s.MessageReactionAdd(m.ChannelID, m.ID, "❌")
-}
-
-func ReactSuccess(s *discordgo.Session, m *discordgo.Message) {
-	s.MessageReactionsRemoveEmoji(m.ChannelID, m.ID, "⚙️")
-	s.MessageReactionAdd(m.ChannelID, m.ID, "✅")
 }
 
 func ReplyToMsg(s *discordgo.Session, m *discordgo.Message, replyMsg string) (*discordgo.Message, error) {
@@ -236,7 +226,7 @@ type Game struct {
 }
 
 func RequestPlayerAchievements(discordID string) ([]Game, error) {
-	xbID, ok := DatabaseMap[discordID]
+	xbID, ok := databaseMap[discordID]
 	if !ok {
 		return nil, errors.New("Please set your gamertag first using the `/gamertag` command")
 	}
@@ -247,7 +237,7 @@ func RequestPlayerAchievements(discordID string) ([]Game, error) {
 		return nil, err
 	}
 
-	req.Header.Add("X-Authorization", Tokens.OpenXBL)
+	req.Header.Add("X-Authorization", tokens.OpenXBL)
 	req.Header.Add("Accept", "application/json")
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -291,7 +281,7 @@ func RequestPlayerGT(gamerTag string) (string, error) {
 		return "", err
 	}
 
-	req.Header.Add("X-Authorization", Tokens.OpenXBL)
+	req.Header.Add("X-Authorization", tokens.OpenXBL)
 	req.Header.Add("Accept", "application/json")
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -310,7 +300,7 @@ func RequestPlayerGT(gamerTag string) (string, error) {
 	var respID []GTResp
 	err = json.Unmarshal(objMap["profileUsers"], &respID)
 	if err != nil {
-		return "", errors.New("Hmm, that gamertag didn't work! For names using the new gamertag system, please do not put a hashtag before the numbers.")
+		return "", errors.New("Hmm, that gamertag didn't work! Please make sure you typed the gamertag correctly.")
 	}
 
 	return respID[0].ID, nil
