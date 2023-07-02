@@ -28,23 +28,23 @@ func InitCommands(s *discordgo.Session) {
 		},
 		{
 			Name:        "mcc",
-			Description: "Check if you're eligible for the MCC 100% completion role.",
+			Description: "Check if you're eligible for the MCC 100% completion role",
 		},
 		{
 			Name:        "infinite",
-			Description: "Check if you're eligible for the Infinite 100% completion role.",
+			Description: "Check if you're eligible for the Infinite 100% completion role",
 		},
 		{
 			Name:        "legacy",
-			Description: "Check if you're eligible for the Legacy Completionist role.",
+			Description: "Check if you're eligible for the Legacy Completionist role",
 		},
 		{
 			Name:        "modern",
-			Description: "Check if you're eligible for the Modern Completionist role.",
+			Description: "Check if you're eligible for the Modern Completionist role",
 		},
 		{
 			Name:        "hc",
-			Description: "Check if you're eligible for the Halo Completionist role.",
+			Description: "Check if you're eligible for the Halo Completionist role",
 		},
 		{
 			Name:        "riddle",
