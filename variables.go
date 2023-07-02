@@ -24,18 +24,17 @@ const (
 )
 
 var (
-	Tokens struct {
+	tokens struct {
 		Discord string `json:"discordToken"`
 		OpenXBL string `json:"xblToken"`
 	}
 
-	commands              = make(map[string]func(s *discordgo.Session, m *discordgo.Message))
 	slashCommandsHandlers = make(map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate))
 	currentComboMsgs      = make(map[string]string)
 
-	DatabaseMap   map[string]string
-	DirtyDatabase bool
-	GlobalLock    sync.Mutex
+	databaseMap   map[string]string
+	dirtyDatabase bool
+	globalLock    sync.Mutex
 	slashCommands []*discordgo.ApplicationCommand
 )
 
