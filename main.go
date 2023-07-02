@@ -13,7 +13,7 @@ import (
 )
 
 func saveDatabase() {
-	if !DirtyDatabase {
+	if !dirtyDatabase {
 		return
 	}
 
@@ -24,7 +24,7 @@ func saveDatabase() {
 	}
 	defer dbFile.Close()
 
-	jsonMap, err := json.Marshal(DatabaseMap)
+	jsonMap, err := json.Marshal(databaseMap)
 	if err != nil {
 		fmt.Println("Error marshaling database!")
 		return
@@ -32,7 +32,7 @@ func saveDatabase() {
 
 	os.WriteFile("database.json", jsonMap, 0644)
 	fmt.Println("Saved database successfully!")
-	DirtyDatabase = false
+	dirtyDatabase = false
 }
 
 func init() {
@@ -45,7 +45,7 @@ func init() {
 	defer jsonFile.Close()
 
 	fileByte, _ := io.ReadAll(jsonFile)
-	json.Unmarshal(fileByte, &Tokens)
+	json.Unmarshal(fileByte, &tokens)
 
 	// Grab guild users' xuids
 	dbFile, err := os.Open("database.json")
@@ -56,13 +56,13 @@ func init() {
 	defer dbFile.Close()
 
 	fileByte, _ = io.ReadAll(dbFile)
-	json.Unmarshal(fileByte, &DatabaseMap)
+	json.Unmarshal(fileByte, &databaseMap)
 
 	go KeepAliveRequest() //Do a simple request to OpenXBL so token is authenticated
 }
 
 func main() {
-	discord, err := discordgo.New("Bot " + Tokens.Discord)
+	discord, err := discordgo.New("Bot " + tokens.Discord)
 	if err != nil {
 		fmt.Println("Error creating Discord session!", err)
 		return
@@ -102,11 +102,7 @@ func main() {
 		}
 	}
 
-	// Delete all application (slash) commands
-	if registeredCommands, err := discord.ApplicationCommands(discord.State.User.ID, hcGuildID); err == nil {
-		for _, cmd := range registeredCommands {
-			discord.ApplicationCommandDelete(discord.State.User.ID, hcGuildID, cmd.ID)
-		}
-	}
+	// V this might not be even needed V
+	discord.ApplicationCommandBulkOverwrite(discord.State.User.ID, hcGuildID, nil) // Delete all application (slash) commands
 	saveDatabase()
 }

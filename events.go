@@ -36,12 +36,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			strings.Contains(msg, "legacy") ||
 			strings.Contains(msg, "modern") {
 
-			str := fmt.Sprintf("<@%s> You can only obtain that role by using me in <#%s>! Type `+help` in there to begin.", m.Author.ID, botChannelID)
+			str := fmt.Sprintf("<@%s> You can only obtain that role by using me in <#%s>! Check my slash commands in there to begin.", m.Author.ID, botChannelID)
 			s.ChannelMessageSend(proofChannelID, str)
 			s.ChannelMessageDelete(proofChannelID, m.ID)
 			return
 		} else if strings.Contains(msg, "halo completionist") || strings.Contains(msg, "hc") {
-			str := fmt.Sprintf("Make sure you used the `+hc` command in <#%s> beforehand. This channel is only if SA/SS is bugged for you!", botChannelID)
+			str := fmt.Sprintf("Make sure you used the `/hc` command in <#%s> beforehand. This channel is only if SA/SS is bugged for you!", botChannelID)
 			ReplyToMsg(s, m.Message, str)
 			return
 		} else {
@@ -67,17 +67,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	if !strings.HasPrefix(m.Content, "+") {
-		CheckComboBreaker(s, m)
-		return
+	// Will remove this after a small transition period
+	if strings.HasPrefix(m.Content, "+") && m.ChannelID == botChannelID {
+		ReplyToMsg(s, m.Message, "We've transitioned from message commands to slash commands! You can check what I can do by typing slash (/) and look at HC Bot category.")
 	}
-	cmdContent := strings.Split(m.Content, " ")
-	cmdName := strings.ToLower(cmdContent[0])
-
-	if commandFnc, ok := commands[cmdName]; ok {
-		go commandFnc(s, m.Message)
-	} else {
-		ReactFail(s, m.Message)
-		s.ChannelMessageSend(m.ChannelID, "That command doesn't exist! Try `+help`")
-	}
+	//////////////////////////////////////////////////
+	CheckComboBreaker(s, m)
 }
