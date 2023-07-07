@@ -14,6 +14,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.Bot {
 		return
 	}
+	if m.Member == nil {
+		// Ignore messages not coming from a guild
+		return
+	}
 
 	// Should probably move these blocks below into their own function
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
