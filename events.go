@@ -76,5 +76,5 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		ReplyToMsg(s, m.Message, "We've transitioned from message commands to slash commands! You can check what I can do by typing slash (/) and look at HC Bot category.")
 	}
 	//////////////////////////////////////////////////
-	CheckComboBreaker(s, m)
+	//CheckComboBreaker(s, m)
 }
