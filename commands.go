@@ -313,7 +313,7 @@ func InitCommands(s *discordgo.Session) {
 **Halo Wars 2** : %s
 **Halo Infinite** : %s
 
-Note: **If you finished everything and played any game on a non-XBL platfori.Interaction, please ping a staff member with screenshot proof in <#984079675385077820>.**`
+Note: **If you finished everything and played any game on a non-XBL platform, please ping a staff member with screenshot proof in <#984079675385077820>.**`
 				failMsg = fmt.Sprintf(failMsg,
 					GetCompletionSymbol(completionMap["Halo: The Master Chief Collection"]),
 					GetCompletionSymbol(completionMap["Halo 5: Guardians"]),
@@ -425,7 +425,7 @@ Instead of **Halo MCC**, you can do:
 **Halo 4** : %s
 
 Note 1: **If your SA/SS completion is not correct, those achievements might be bugged. Ping a staff member with screenshot proof in <#984079675385077820> if it blocks you from obtaining the role**
-Note 2: **If you finished everything and played any game on a non-XBL platfori.Interaction, please ping a staff member with screenshot proof in <#984079675385077820>.**`
+Note 2: **If you finished everything and played any game on a non-XBL platform, please ping a staff member with screenshot proof in <#984079675385077820>.**`
 				failMsg = fmt.Sprintf(failMsg,
 					GetCompletionSymbol(completionMap["Halo: The Master Chief Collection"]),
 					GetCompletionSymbol(completionMap["Halo Wars: Definitive Edition (PC)"]),
