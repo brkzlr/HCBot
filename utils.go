@@ -12,43 +12,17 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func AddGamertagToDB(discordID, xblID string) {
-	globalLock.Lock()
-	databaseMap[discordID] = xblID
-	globalLock.Unlock()
-	dirtyDatabase = true
+func AddChatRequest(request ChatRequest) {
+	chatRequestLock.Lock()
+	chatRequestQueue = append(chatRequestQueue, request)
+	chatRequestLock.Unlock()
 }
 
-func CheckComboBreaker(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if comboMsg, exists := currentComboMsgs[m.ChannelID]; exists {
-		if comboMsg != m.Content {
-			str := fmt.Sprintf("<@%s> You broke the combo!! You absolute buffoon!!", m.Author.ID)
-			ReplyToMsg(s, m.Message, str)
-			s.MessageReactionAdd(m.ChannelID, m.ID, "🤡")
-			delete(currentComboMsgs, m.ChannelID)
-		}
-	} else {
-		messages, err := s.ChannelMessages(m.ChannelID, 2, m.ID, "", "")
-		if err != nil || len(messages) != 2 {
-			return
-		}
-
-		participatingUsers := make(map[string]struct{}) // Ugly way of creating a Set data structure
-		participatingUsers[m.Author.ID] = struct{}{}
-		for _, message := range messages {
-			if message.Content != m.Content || message.Content == "" {
-				return
-			}
-
-			// Unique users only
-			if _, exists := participatingUsers[message.Author.ID]; exists {
-				return
-			}
-			participatingUsers[message.Author.ID] = struct{}{}
-		}
-
-		currentComboMsgs[m.ChannelID] = m.Content
-	}
+func AddGamertagToDB(discordID, xblID string) {
+	databaseLock.Lock()
+	databaseMap[discordID] = xblID
+	databaseLock.Unlock()
+	dirtyDatabase = true
 }
 
 func CheckTimedAchievs(session *discordgo.Session) {
@@ -107,11 +81,6 @@ func GetCompletionSymbol(gameCompl bool) string {
 	} else {
 		return "❌"
 	}
-}
-
-type Riddle struct {
-	Question string `json:"riddle"`
-	Answer   string `json:"answer"`
 }
 
 func GetRiddle() (Riddle, error) {
@@ -216,15 +185,6 @@ func RespondToInteraction(s *discordgo.Session, i *discordgo.Interaction, respon
 	})
 }
 
-type Game struct {
-	Name  string `json:"name"`
-	Stats struct {
-		CurrentGScore int `json:"currentGamerscore"`
-		TotalGScore   int `json:"totalGamerscore"`
-	} `json:"achievement"`
-	TitleID string `json:"titleId"`
-}
-
 func RequestPlayerAchievements(discordID string) ([]Game, error) {
 	xbID, ok := databaseMap[discordID]
 	if !ok {
@@ -264,10 +224,6 @@ func RequestPlayerAchievements(discordID string) ([]Game, error) {
 	}
 
 	return games, nil
-}
-
-type GTResp struct {
-	ID string `json:"id"`
 }
 
 func RequestPlayerGT(gamerTag string) (string, error) {
