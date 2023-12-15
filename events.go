@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	openai "github.com/sashabaranov/go-openai"
 )
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -71,10 +73,34 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	// Will remove this after a small transition period
-	if strings.HasPrefix(m.Content, "+") && m.ChannelID == botChannelID {
-		ReplyToMsg(s, m.Message, "We've transitioned from message commands to slash commands! You can check what I can do by typing slash (/) and look at HC Bot category.")
+	if len(m.Content) != 0 && len(m.Mentions) != 0 && m.Mentions[0].ID == s.State.User.ID {
+		msgContent := m.Content
+		if strings.HasPrefix(msgContent, "<@") {
+			msgContent = strings.Join(strings.Split(msgContent, " ")[1:], " ")
+		}
+		msgContent = strings.ToLower(strings.TrimLeft(msgContent, " "))
+
+		if strings.HasPrefix(msgContent, "image:") {
+			msgContent = strings.ReplaceAll(msgContent, "image:", "")
+			reqUrl := openai.ImageRequest{
+				Model:          openai.CreateImageModelDallE3,
+				Prompt:         msgContent,
+				Size:           openai.CreateImageSize1024x1024,
+				ResponseFormat: openai.CreateImageResponseFormatURL,
+				N:              1,
+			}
+
+			respUrl, err := aiClient.CreateImage(context.Background(), reqUrl)
+			if err != nil {
+				fmt.Printf("Image creation error: %v\n", err)
+				ReplyToMsg(s, m.Message, "Sorry! I encountered an Image creation error! Please retry later.")
+				return
+			}
+
+			ReplyToMsg(s, m.Message, respUrl.Data[0].URL)
+
+		} else {
+			AddChatRequest(ChatRequest{MessageEvent: m, Prompt: msgContent})
+		}
 	}
-	//////////////////////////////////////////////////
-	//CheckComboBreaker(s, m)
 }
