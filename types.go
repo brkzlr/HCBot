@@ -2,14 +2,7 @@ package main
 
 import (
 	"time"
-
-	"github.com/bwmarrin/discordgo"
 )
-
-type ChatRequest struct {
-	MessageEvent *discordgo.MessageCreate
-	Prompt       string
-}
 
 type Game struct {
 	Name  string `json:"name"`
