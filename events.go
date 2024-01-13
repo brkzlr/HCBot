@@ -1,13 +1,11 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	openai "github.com/sashabaranov/go-openai"
 )
 
 var isTimerActive bool
@@ -84,35 +82,4 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 	}
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
-
-	if len(m.Content) != 0 && len(m.Mentions) != 0 && m.Mentions[0].ID == s.State.User.ID {
-		msgContent := m.Content
-		if strings.HasPrefix(msgContent, "<@") {
-			msgContent = strings.Join(strings.Split(msgContent, " ")[1:], " ")
-		}
-		msgContent = strings.ToLower(strings.TrimLeft(msgContent, " "))
-
-		if strings.HasPrefix(msgContent, "image:") {
-			msgContent = strings.ReplaceAll(msgContent, "image:", "")
-			reqUrl := openai.ImageRequest{
-				Model:          openai.CreateImageModelDallE3,
-				Prompt:         msgContent,
-				Size:           openai.CreateImageSize1024x1024,
-				ResponseFormat: openai.CreateImageResponseFormatURL,
-				N:              1,
-			}
-
-			respUrl, err := aiClient.CreateImage(context.Background(), reqUrl)
-			if err != nil {
-				fmt.Printf("Image creation error: %v\n", err)
-				ReplyToMsg(s, m.Message, "Sorry! I encountered an Image creation error! Please retry later.")
-				return
-			}
-
-			ReplyToMsg(s, m.Message, respUrl.Data[0].URL)
-
-		} else {
-			AddChatRequest(ChatRequest{MessageEvent: m, Prompt: msgContent})
-		}
-	}
 }
