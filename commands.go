@@ -242,6 +242,7 @@ func InitCommands(s *discordgo.Session) {
 		for _, isDone := range completionMap {
 			if !isDone {
 				failMsg := `**You're not eligible for the role**. Retry the command once you have all of the listed games completed.
+
 You can find your current progress on the Legacy Completionist games below, **but please note that the following info is not saved, only checked in the moment**:
 **Halo Combat Evolved Anniversary** : %s
 **Halo 3** : %s
@@ -308,6 +309,7 @@ You can find your current progress on the Legacy Completionist games below, **bu
 		for _, isDone := range completionMap {
 			if !isDone {
 				failMsg := `**You're not eligible for the role**. Retry the command once you have all of the listed games completed.
+
 You can find your current progress on the Modern Completionist games below, **but please note that the following info is not saved, only checked in the moment**:
 **Halo MCC** : %s
 **Halo 5 Guardians** : %s
@@ -409,6 +411,7 @@ Note: **If you finished everything and played any game on a non-XBL platform, pl
 					}
 				}
 				failMsg := `**You're not eligible for the role**. Retry the command once you have all of the listed games completed.
+
 You can find your current progress on the Halo Completionist games below, **but please note that the following info is not saved, only checked in the moment**:
 **Halo MCC** : %s
 **Halo Wars Definitive Edition** : %s  or  **Halo Wars** : %s
