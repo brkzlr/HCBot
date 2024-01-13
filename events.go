@@ -4,13 +4,25 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	openai "github.com/sashabaranov/go-openai"
 )
 
+var isTimerActive bool
+
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
+		return
+	}
+	if m.ChannelID == dropsChannelID && m.Author.ID == "1102708418407583794" && !isTimerActive {
+		isTimerActive = true
+		time.AfterFunc(5*time.Minute, func() {
+			replyStr := fmt.Sprintf("Hey <@&%s>! Check out this ^ drop/giveaway.", dropsRoleID)
+			ReplyToMsg(s, m.Message, replyStr)
+			isTimerActive = false
+		})
 		return
 	}
 	if m.Author.Bot {
