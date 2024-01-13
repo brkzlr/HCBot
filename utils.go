@@ -12,12 +12,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func AddChatRequest(request ChatRequest) {
-	chatRequestLock.Lock()
-	chatRequestQueue = append(chatRequestQueue, request)
-	chatRequestLock.Unlock()
-}
-
 func AddGamertagToDB(discordID, xblID string) {
 	databaseLock.Lock()
 	databaseMap[discordID] = xblID

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	openai "github.com/sashabaranov/go-openai"
 )
 
 // Constants, mostly channel or role IDs
@@ -33,7 +32,6 @@ var (
 	tokens struct {
 		Discord string `json:"discordToken"`
 		OpenXBL string `json:"xblToken"`
-		OpenAI  string `json:"aiToken"`
 	}
 
 	slashCommandsHandlers = make(map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate))
@@ -42,13 +40,6 @@ var (
 	dirtyDatabase bool
 	databaseLock  sync.Mutex
 	slashCommands []*discordgo.ApplicationCommand
-
-	// AI stuff
-	aiClient         *openai.Client
-	contextMessages  []openai.ChatCompletionMessage
-	dirtyContextMsg  bool
-	chatRequestQueue []ChatRequest
-	chatRequestLock  sync.Mutex
 )
 
 // Timed achievements variables
