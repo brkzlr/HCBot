@@ -212,7 +212,7 @@ func InitCommands(s *discordgo.Session) {
 		for _, game := range games {
 			if game.TitleID == "1144039928" {
 				if game.Stats.CurrentGScore == game.Stats.TotalGScore {
-					RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished MCC! Congrats!", i.Member.User.Username))
+					RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished MCC! Congrats!", i.Member.DisplayName()))
 					s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, mccRoleID)
 					return
 				} else {
@@ -243,7 +243,7 @@ func InitCommands(s *discordgo.Session) {
 		for _, game := range games {
 			if game.TitleID == "812065290" {
 				if game.Stats.CurrentGScore == (game.Stats.TotalGScore - 90) { // MCC CN has 4 unobtainable achievements that are 90G in total
-					RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s \"finished\" MCC China! Congrats!", i.Member.User.Username))
+					RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s \"finished\" MCC China! Congrats!", i.Member.DisplayName()))
 					s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, mccChinaRoleID)
 					return
 				} else {
@@ -287,7 +287,7 @@ func InitCommands(s *discordgo.Session) {
 		for _, game := range games {
 			if game.Name == "Halo Infinite" {
 				if game.Stats.CurrentGScore == game.Stats.TotalGScore {
-					RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished Halo Infinite! Congrats!", i.Member.User.Username))
+					RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished Halo Infinite! Congrats!", i.Member.DisplayName()))
 					s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, infiniteRoleID)
 					return
 				} else {
@@ -358,7 +358,7 @@ You can find your current progress on the Legacy Completionist games below, **bu
 			}
 		}
 
-		RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished Legacy Completionist! Congrats!", i.Member.User.Username))
+		RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished Legacy Completionist! Congrats!", i.Member.DisplayName()))
 		s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, legacyRoleID)
 	}
 
@@ -425,7 +425,7 @@ Note: **If you finished everything and played any game on a non-XBL platform, pl
 			}
 		}
 
-		RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished Modern Completionist! Congrats!", i.Member.User.Username))
+		RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished Modern Completionist! Congrats!", i.Member.DisplayName()))
 		s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, mccRoleID)
 		s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, infiniteRoleID)
 		s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, modernRoleID)
@@ -549,7 +549,7 @@ Note 2: **If you finished everything and played any game on a non-XBL platform, 
 			}
 		}
 
-		RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished Halo Completionist! Congrats!", i.Member.User.Username))
+		RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished Halo Completionist! Congrats!", i.Member.DisplayName()))
 		s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, mccRoleID)
 		s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, infiniteRoleID)
 		s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, modernRoleID)
