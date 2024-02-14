@@ -10,6 +10,7 @@ import (
 // Constants, mostly channel or role IDs
 const (
 	mccRoleID       = "985327507274350612"
+	mccChinaRoleID  = "1206765698869887016"
 	infiniteRoleID  = "985327648605614140"
 	modernRoleID    = "985327740112760873"
 	legacyRoleID    = "985327809566232626"

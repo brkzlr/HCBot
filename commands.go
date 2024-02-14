@@ -31,6 +31,10 @@ func InitCommands(s *discordgo.Session) {
 			Description: "Check if you're eligible for the MCC 100% completion role",
 		},
 		{
+			Name:        "mcc-cn",
+			Description: "Check if you're eligible for the MCC CN \"100%\" completion role",
+		},
+		{
 			Name:        "infinite",
 			Description: "Check if you're eligible for the Infinite 100% completion role",
 		},
@@ -219,6 +223,37 @@ func InitCommands(s *discordgo.Session) {
 		}
 
 		RespondFollowUpToInteraction(s, i.Interaction, "You haven't played MCC before.")
+	}
+
+	slashCommandsHandlers["mcc-cn"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		LogCommand("mcc-cn", i.Member.User.Username)
+
+		if HasRole(i.Member, mccChinaRoleID) {
+			RespondToInteraction(s, i.Interaction, "You've already \"finished\" MCC China.")
+			return
+		}
+		RespondACKToInteraction(s, i.Interaction)
+
+		games, err := RequestPlayerAchievements(i.Member.User.ID)
+		if err != nil {
+			RespondFollowUpToInteraction(s, i.Interaction, err.Error())
+			return
+		}
+
+		for _, game := range games {
+			if game.TitleID == "812065290" {
+				if game.Stats.CurrentGScore == (game.Stats.TotalGScore - 90) { // MCC CN has 4 unobtainable achievements that are 90G in total
+					RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s \"finished\" MCC China! Congrats!", i.Member.User.Username))
+					s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, mccChinaRoleID)
+					return
+				} else {
+					RespondFollowUpToInteraction(s, i.Interaction, "Sorry, you haven't \"finished\" MCC China yet.")
+					return
+				}
+			}
+		}
+
+		RespondFollowUpToInteraction(s, i.Interaction, "You haven't played MCC China before.")
 	}
 
 	slashCommandsHandlers["infinite"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
