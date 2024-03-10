@@ -179,6 +179,16 @@ func RespondToInteraction(s *discordgo.Session, i *discordgo.Interaction, respon
 	})
 }
 
+func RespondToInteractionEphemeral(s *discordgo.Session, i *discordgo.Interaction, respondMsg string) error {
+	return s.InteractionRespond(i, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: respondMsg,
+			Flags:   discordgo.MessageFlagsEphemeral,
+		},
+	})
+}
+
 func RequestPlayerAchievements(discordID string) ([]Game, error) {
 	xbID, ok := databaseMap[discordID]
 	if !ok {
