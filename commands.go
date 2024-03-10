@@ -165,6 +165,9 @@ func InitCommands(s *discordgo.Session) {
 
 	slashCommandsHandlers["gamertag"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("gamertag", i.Member.User.Username)
+		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
+			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
+		}
 
 		gTag := i.ApplicationCommandData().Options[0].StringValue()
 		xuid, err := RequestPlayerGT(gTag)
@@ -179,6 +182,9 @@ func InitCommands(s *discordgo.Session) {
 
 	slashCommandsHandlers["mcc"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("mcc", i.Member.User.Username)
+		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
+			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
+		}
 
 		rolesMap := HasRoles(i.Member, []string{mccRoleID, mccMasterRoleID, modernRoleID, hcRoleID, fcRoleID})
 		if rolesMap[fcRoleID] {
@@ -227,6 +233,9 @@ func InitCommands(s *discordgo.Session) {
 
 	slashCommandsHandlers["mcc-cn"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("mcc-cn", i.Member.User.Username)
+		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
+			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
+		}
 
 		if HasRole(i.Member, mccChinaRoleID) {
 			RespondToInteraction(s, i.Interaction, "You've already \"finished\" MCC China.")
@@ -258,6 +267,9 @@ func InitCommands(s *discordgo.Session) {
 
 	slashCommandsHandlers["infinite"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("infinite", i.Member.User.Username)
+		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
+			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
+		}
 
 		rolesMap := HasRoles(i.Member, []string{infiniteRoleID, modernRoleID, hcRoleID, fcRoleID})
 		if rolesMap[fcRoleID] {
@@ -302,6 +314,9 @@ func InitCommands(s *discordgo.Session) {
 
 	slashCommandsHandlers["legacy"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("legacy", i.Member.User.Username)
+		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
+			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
+		}
 
 		rolesMap := HasRoles(i.Member, []string{legacyRoleID, fcRoleID})
 		if rolesMap[fcRoleID] {
@@ -364,6 +379,9 @@ You can find your current progress on the Legacy Completionist games below, **bu
 
 	slashCommandsHandlers["modern"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("modern", i.Member.User.Username)
+		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
+			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
+		}
 
 		rolesMap := HasRoles(i.Member, []string{modernRoleID, hcRoleID, fcRoleID})
 		if rolesMap[fcRoleID] {
@@ -433,6 +451,9 @@ Note: **If you finished everything and played any game on a non-XBL platform, pl
 
 	slashCommandsHandlers["hc"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("hc", i.Member.User.Username)
+		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
+			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
+		}
 
 		rolesMap := HasRoles(i.Member, []string{hcRoleID, fcRoleID})
 		if rolesMap[fcRoleID] {
