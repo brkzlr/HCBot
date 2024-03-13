@@ -167,6 +167,7 @@ func InitCommands(s *discordgo.Session) {
 		LogCommand("gamertag", i.Member.User.Username)
 		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
 			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
+			return
 		}
 
 		gTag := i.ApplicationCommandData().Options[0].StringValue()
@@ -184,6 +185,7 @@ func InitCommands(s *discordgo.Session) {
 		LogCommand("mcc", i.Member.User.Username)
 		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
 			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
+			return
 		}
 
 		rolesMap := HasRoles(i.Member, []string{mccRoleID, mccMasterRoleID, modernRoleID, hcRoleID, fcRoleID})
@@ -235,6 +237,7 @@ func InitCommands(s *discordgo.Session) {
 		LogCommand("mcc-cn", i.Member.User.Username)
 		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
 			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
+			return
 		}
 
 		if HasRole(i.Member, mccChinaRoleID) {
@@ -269,6 +272,7 @@ func InitCommands(s *discordgo.Session) {
 		LogCommand("infinite", i.Member.User.Username)
 		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
 			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
+			return
 		}
 
 		rolesMap := HasRoles(i.Member, []string{infiniteRoleID, modernRoleID, hcRoleID, fcRoleID})
@@ -316,6 +320,7 @@ func InitCommands(s *discordgo.Session) {
 		LogCommand("legacy", i.Member.User.Username)
 		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
 			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
+			return
 		}
 
 		rolesMap := HasRoles(i.Member, []string{legacyRoleID, fcRoleID})
@@ -381,6 +386,7 @@ You can find your current progress on the Legacy Completionist games below, **bu
 		LogCommand("modern", i.Member.User.Username)
 		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
 			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
+			return
 		}
 
 		rolesMap := HasRoles(i.Member, []string{modernRoleID, hcRoleID, fcRoleID})
@@ -453,6 +459,7 @@ Note: **If you finished everything and played any game on a non-XBL platform, pl
 		LogCommand("hc", i.Member.User.Username)
 		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
 			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
+			return
 		}
 
 		rolesMap := HasRoles(i.Member, []string{hcRoleID, fcRoleID})
