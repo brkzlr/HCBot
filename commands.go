@@ -180,7 +180,7 @@ func InitCommands(s *discordgo.Session) {
 		if onCooldown, duration := CheckCooldown(i.Member.User.ID); onCooldown {
 			RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Sorry! You're on cooldown for this command. Remaining duration: %v", duration))
 			return
-		} else {
+		} else if !IsStaff(i.Member) {
 			AddRoleCheckCooldown(i.Member.User.ID)
 		}
 
