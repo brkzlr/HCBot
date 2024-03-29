@@ -4,6 +4,12 @@ import (
 	"time"
 )
 
+type AchievListInfo struct {
+	PagingInfo struct {
+		TotalRecords int `json:"totalRecords"`
+	} `json:"pagingInfo"`
+}
+
 type GameStatsResp struct {
 	Stats struct {
 		CurrentGScore int `json:"currentGamerscore"`
