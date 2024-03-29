@@ -176,6 +176,11 @@ func InitCommands(s *discordgo.Session) {
 			RespondFollowUpToInteraction(s, i.Interaction, err.Error())
 			return
 		}
+		spartanGamesStats, err := CheckLegacyAssaultStrikeAchievements(i.Member.User.ID)
+		if err != nil {
+			RespondFollowUpToInteraction(s, i.Interaction, err.Error())
+			return
+		}
 
 		if onCooldown, duration := CheckCooldown(i.Member.User.ID); onCooldown {
 			RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Sorry! You're on cooldown for this command. Remaining duration: %v", duration))
@@ -221,7 +226,7 @@ func InitCommands(s *discordgo.Session) {
 		/////////////////////////////////////////////////////////////////////////////////////////
 
 		for _, game := range gamesStats {
-			isDone := (game.Stats.CurrentGScore == game.Stats.TotalGScore) && (game.Stats.TotalGScore != 0) // Some games like SS and SA are bugged
+			isDone := (game.Stats.CurrentGScore == game.Stats.TotalGScore) && (game.Stats.TotalGScore != 0)
 			if _, exists := modernCompletionMap[game.TitleID]; exists {
 				if isDone {
 					modernCompletionMap[game.TitleID] = COMPLETED
@@ -246,21 +251,28 @@ func InitCommands(s *discordgo.Session) {
 					miscCompletionMap[game.TitleID] = NOT_COMPLETED
 				}
 			}
-			if _, exists := assaultCompletionMap[game.TitleID]; exists {
+			// We'll grab X1/XSX version of Spartan Assault here but check the other versions below
+			if game.TitleID == hsaXboxTitleID {
 				if isDone {
-					assaultCompletionMap[game.TitleID] = COMPLETED
+					assaultCompletionMap[hsaXboxTitleID] = COMPLETED
 				} else {
-					assaultCompletionMap[game.TitleID] = NOT_COMPLETED
+					assaultCompletionMap[hsaXboxTitleID] = NOT_COMPLETED
 				}
 			}
-			if _, exists := strikeCompletionMap[game.TitleID]; exists {
-				if isDone {
-					strikeCompletionMap[game.TitleID] = COMPLETED
-				} else {
-					strikeCompletionMap[game.TitleID] = NOT_COMPLETED
-				}
+		}
+		for titleID := range assaultCompletionMap {
+			if titleID == hsaXboxTitleID {
+				continue
 			}
 
+			assaultCompletionMap[titleID] = spartanGamesStats[titleID]
+		}
+		for titleID := range strikeCompletionMap {
+			if titleID == hsaXboxTitleID {
+				continue
+			}
+
+			strikeCompletionMap[titleID] = spartanGamesStats[titleID]
 		}
 
 		progressMsg := `Role check done! If you fulfill any of the role requirements, the role has been assigned to you. You can check role requirements in <#984078260671483945>.
@@ -303,8 +315,7 @@ Forgotten by the world:
 - **Halo: The Master Chief Collection (China)**: %s
 - **Halo 5 Forge**: %s
 
-Note 1: **If your SA/SS games are marked as not found even if you played them, those achievements might be bugged on your profile. Post screenshot proof in <#984079675385077820> with the desired role name ONLY if it blocks you from obtaining the role**
-Note 2: **If you finished the requirements for a role but played any game on a non-XBL platform, post screenshot proof in <#984079675385077820> with the desired role name.**`
+Note 1: **If you finished the requirements for a role but played any game on a non-XBL platform, post screenshot proof in <#984079675385077820> with the desired role name.**`
 		progressMsg = fmt.Sprintf(progressMsg,
 			GetCompletionSymbol(modernCompletionMap[mccTitleID]),
 			GetCompletionSymbol(modernCompletionMap[h5TitleID]),

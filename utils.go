@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -33,6 +33,94 @@ func CheckCooldown(discordID string) (bool, time.Duration) {
 		return expirationTime.After(time.Now()), expirationTime.Sub(time.Now())
 	}
 	return false, 0
+}
+
+// This function will query Spartan Assault & Spartan Strike legacy platform achievements
+// as they can be bugged if we check the profile with RequestPlayerAchievements
+// while querying individual title IDs will return the correct state
+func CheckLegacyAssaultStrikeAchievements(discordID string) (map[string]GameStatus, error) {
+	// We'll skip over Spartan Assault X1/XSX because this endpoint can only detect older versions
+	gamesToCheck := map[string]GameStatus{
+		hsaTitleID:    NOT_FOUND, // Windows version
+		hsa360TitleID: NOT_FOUND,
+		hsaWPTitleID:  NOT_FOUND,
+		hsaIOSTitleID: NOT_FOUND,
+
+		hssTitleID:    NOT_FOUND,
+		hssWPTitleID:  NOT_FOUND,
+		hssIOSTitleID: NOT_FOUND,
+	}
+	// Hardcode the achievement count for these game to reduce the number of calls to the API as they're unlikely to change
+	// We have to check 7 games (8th being X1/XSX which can be found by the other endpoint)
+	// but this endpoint will only give the achievements the player has.
+	// This means we either check against hardcoded numbers or call another endpoint which will give
+	// the total amount of achievements, which would double the number of calls per user to 14 just for SS/SA
+	const (
+		AssaultAchievCount    = 25 // Windows/WP/iOS
+		Assault360AchievCount = 28
+		StrikeAchievCount     = 20 // Spartan Strike has 20 achievements on all 3 platforms
+	)
+
+	// This function should never be called before RequestPlayerAchievements so we'll skip the checks
+	xbID := databaseMap[discordID]
+
+	for titleID := range gamesToCheck {
+		url := "https://xbl.io/api/v2/achievements/x360/" + xbID + "/title/" + titleID
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Add("X-Authorization", tokens.OpenXBL)
+		req.Header.Add("Accept", "application/json")
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, errors.New("Whoops! Server responded with an error! Apologies, please try again!")
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, errors.New("Whoops! Server responded with an error! Apologies, please try again!")
+		}
+
+		var playerAchievsInfo AchievListInfo
+		err = json.Unmarshal(body, &playerAchievsInfo)
+		if err != nil {
+			return nil, errors.New("Whoops! Server responded with an error! Apologies, please try again!")
+		}
+
+		achievCountToCheck := 0
+		switch titleID {
+		case hsaTitleID:
+			fallthrough
+		case hsaWPTitleID:
+			fallthrough
+		case hsaIOSTitleID:
+			achievCountToCheck = AssaultAchievCount
+
+		case hsa360TitleID:
+			achievCountToCheck = Assault360AchievCount
+
+		case hssTitleID:
+			fallthrough
+		case hssWPTitleID:
+			fallthrough
+		case hssIOSTitleID:
+			achievCountToCheck = StrikeAchievCount
+		}
+
+		if playerAchievsInfo.PagingInfo.TotalRecords == achievCountToCheck {
+			gamesToCheck[titleID] = COMPLETED
+		} else if playerAchievsInfo.PagingInfo.TotalRecords == 0 {
+			gamesToCheck[titleID] = NOT_FOUND
+		} else {
+			gamesToCheck[titleID] = NOT_COMPLETED
+		}
+	}
+
+	return gamesToCheck, nil
 }
 
 func CheckTimedAchievs(session *discordgo.Session) {
@@ -105,7 +193,7 @@ func GetRiddle() (Riddle, error) {
 	}
 	defer resp.Body.Close()
 
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 
 	var riddleResp Riddle
 	if err = json.Unmarshal(body, &riddleResp); err != nil {
