@@ -7,7 +7,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-// Constants, mostly channel or role IDs
+// Constants
 const (
 	mccRoleID       = "985327507274350612"
 	mccChinaRoleID  = "1206765698869887016"
@@ -26,6 +26,32 @@ const (
 	dropsRoleID    = "984088663946326018"
 
 	hcGuildID = "984075026816991252"
+
+	// Title IDs
+	mccTitleID      = "1144039928"
+	mccChinaTitleID = "812065290"
+	hwdeTitleID     = "1030018025"
+	h5TitleID       = "219630713"
+	h5ForgeTitleID  = "766737132"
+	hw2TitleID      = "1667928394"
+	infiniteTitleID = "2043073184"
+	hceaTitleID     = "1297287601"
+	h3TitleID       = "1297287142"
+	hwTitleID       = "1297287176"
+	odstTitleID     = "1297287287"
+	reachTitleID    = "1297287259"
+	h4TitleID       = "1297287449"
+	h2TitleID       = "1297287183"
+
+	hsaTitleID     = "1297292157"
+	hsaXboxTitleID = "682562723"
+	hsa360TitleID  = "1480659986"
+	hsaWPTitleID   = "1297290378"
+	hsaIOSTitleID  = "1297291180"
+
+	hssTitleID    = "1297292194"
+	hssWPTitleID  = "1297290417"
+	hssIOSTitleID = "1297291181"
 )
 
 // Global variables
@@ -40,7 +66,10 @@ var (
 	databaseMap   map[string]string
 	dirtyDatabase bool
 	databaseLock  sync.Mutex
+
 	slashCommands []*discordgo.ApplicationCommand
+	cooldownMap   = make(map[string]time.Time)
+	cooldownLock  sync.Mutex
 )
 
 // Timed achievements variables
