@@ -19,6 +19,22 @@ func AddGamertagToDB(discordID, xblID string) {
 	dirtyDatabase = true
 }
 
+func AddRoleCheckCooldown(discordID string) {
+	cooldownLock.Lock()
+	cooldownMap[discordID] = time.Now().Add(time.Hour * 1)
+	cooldownLock.Unlock()
+}
+
+func CheckCooldown(discordID string) (bool, time.Duration) {
+	cooldownLock.Lock()
+	expirationTime, exists := cooldownMap[discordID]
+	cooldownLock.Unlock()
+	if exists {
+		return expirationTime.After(time.Now()), expirationTime.Sub(time.Now())
+	}
+	return false, 0
+}
+
 func CheckTimedAchievs(session *discordgo.Session) {
 	today := time.Now().UTC()
 	if today.Hour() != 9 || today.Minute() != 0 { //@todo: Find a better way to activate at 9 AM UTC
@@ -69,12 +85,17 @@ func GetAllGuildMembers(s *discordgo.Session, guildID string) []*discordgo.Membe
 	return guildMembers
 }
 
-func GetCompletionSymbol(gameCompl bool) string {
-	if gameCompl {
-		return "✅"
-	} else {
+func GetCompletionSymbol(status GameStatus) string {
+	switch status {
+	case NOT_FOUND:
 		return "❌"
+	case NOT_COMPLETED:
+		return "🔶"
+	case COMPLETED:
+		return "✅"
 	}
+
+	return "❔"
 }
 
 func GetRiddle() (Riddle, error) {
@@ -189,7 +210,7 @@ func RespondToInteractionEphemeral(s *discordgo.Session, i *discordgo.Interactio
 	})
 }
 
-func RequestPlayerAchievements(discordID string) ([]Game, error) {
+func RequestPlayerAchievements(discordID string) ([]GameStatsResp, error) {
 	xbID, ok := databaseMap[discordID]
 	if !ok {
 		return nil, errors.New("Please set your gamertag first using the `/gamertag` command")
@@ -217,17 +238,17 @@ func RequestPlayerAchievements(discordID string) ([]Game, error) {
 		return nil, errors.New("Whoops! Server responded with an error! Apologies, please try again!")
 	}
 
-	var games []Game
-	err = json.Unmarshal(objMap["titles"], &games)
+	var gamesStats []GameStatsResp
+	err = json.Unmarshal(objMap["titles"], &gamesStats)
 	if err != nil {
 		return nil, errors.New("Whoops! Server responded with an error! Apologies, please try again!")
 	}
 
-	if len(games) == 0 {
+	if len(gamesStats) == 0 {
 		return nil, errors.New("You have either not played any games or your Xbox profile is private.")
 	}
 
-	return games, nil
+	return gamesStats, nil
 }
 
 func RequestPlayerGT(gamerTag string) (string, error) {

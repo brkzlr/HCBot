@@ -27,28 +27,8 @@ func InitCommands(s *discordgo.Session) {
 			},
 		},
 		{
-			Name:        "mcc",
-			Description: "Check if you're eligible for the MCC 100% completion role",
-		},
-		{
-			Name:        "mcc-cn",
-			Description: "Check if you're eligible for the MCC CN \"100%\" completion role",
-		},
-		{
-			Name:        "infinite",
-			Description: "Check if you're eligible for the Infinite 100% completion role",
-		},
-		{
-			Name:        "legacy",
-			Description: "Check if you're eligible for the Legacy Completionist role",
-		},
-		{
-			Name:        "modern",
-			Description: "Check if you're eligible for the Modern Completionist role",
-		},
-		{
-			Name:        "hc",
-			Description: "Check if you're eligible for the Halo Completionist role",
+			Name:        "rolecheck",
+			Description: "Checks and grants you roles according to your Halo game achievement completions",
 		},
 		{
 			Name:        "riddle",
@@ -123,7 +103,7 @@ func InitCommands(s *discordgo.Session) {
 	// Create the handler for each slash command
 	slashCommandsHandlers["count"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("count", i.Member.User.Username)
-		rolesToCheck := []string{mccRoleID, infiniteRoleID, modernRoleID, legacyRoleID, lasochistRoleID, mccMasterRoleID, hcRoleID, fcRoleID}
+		rolesToCheck := []string{mccRoleID, mccChinaRoleID, infiniteRoleID, modernRoleID, legacyRoleID, lasochistRoleID, mccMasterRoleID, hcRoleID, fcRoleID}
 
 		rolesCount := make(map[string]int)
 		for _, roleID := range rolesToCheck {
@@ -142,6 +122,7 @@ func InitCommands(s *discordgo.Session) {
 
 		resultStr := "Number of users with each role:\n" +
 			"MCC:  **%d**\n" +
+			"MCC China:  **%d**\n" +
 			"Infinite:  **%d**\n" +
 			"Modern Completionist:  **%d**\n" +
 			"Legacy Completionist:  **%d**\n" +
@@ -152,6 +133,7 @@ func InitCommands(s *discordgo.Session) {
 
 		resultMsg := fmt.Sprintf(resultStr,
 			rolesCount[mccRoleID],
+			rolesCount[mccChinaRoleID],
 			rolesCount[infiniteRoleID],
 			rolesCount[modernRoleID],
 			rolesCount[legacyRoleID],
@@ -181,407 +163,277 @@ func InitCommands(s *discordgo.Session) {
 		RespondToInteraction(s, i.Interaction, fmt.Sprintf("Gamertag set to \"%s\".", gTag))
 	}
 
-	slashCommandsHandlers["mcc"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		LogCommand("mcc", i.Member.User.Username)
+	slashCommandsHandlers["rolecheck"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		LogCommand("rolecheck", i.Member.User.Username)
 		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
 			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
 			return
 		}
-
-		rolesMap := HasRoles(i.Member, []string{mccRoleID, mccMasterRoleID, modernRoleID, hcRoleID, fcRoleID})
-		if rolesMap[fcRoleID] {
-			RespondToInteraction(s, i.Interaction, "You've already finished Franchise Completionist, which requires MCC.")
-			return
-		}
-		if rolesMap[hcRoleID] {
-			RespondToInteraction(s, i.Interaction, "You've already finished Halo Completionist, which replaces MCC.")
-			return
-		}
-		if rolesMap[modernRoleID] {
-			RespondToInteraction(s, i.Interaction, "You've already finished Modern Completionist, which requires MCC.")
-			return
-		}
-		if rolesMap[mccMasterRoleID] {
-			RespondToInteraction(s, i.Interaction, "You've already finished MCC Master, which requires more than the MCC 100% role.")
-			return
-		}
-		if rolesMap[mccRoleID] {
-			RespondToInteraction(s, i.Interaction, "You've already finished MCC.")
-			return
-		}
 		RespondACKToInteraction(s, i.Interaction)
 
-		games, err := RequestPlayerAchievements(i.Member.User.ID)
+		gamesStats, err := RequestPlayerAchievements(i.Member.User.ID)
 		if err != nil {
 			RespondFollowUpToInteraction(s, i.Interaction, err.Error())
 			return
 		}
 
-		for _, game := range games {
-			if game.TitleID == "1144039928" {
-				if game.Stats.CurrentGScore == game.Stats.TotalGScore {
-					RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished MCC! Congrats!", i.Member.DisplayName()))
-					s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, mccRoleID)
-					return
+		if onCooldown, duration := CheckCooldown(i.Member.User.ID); onCooldown {
+			RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Sorry! You're on cooldown for this command. Remaining duration: %v", duration))
+			return
+		} else {
+			AddRoleCheckCooldown(i.Member.User.ID)
+		}
+
+		modernCompletionMap := map[string]GameStatus{
+			mccTitleID:      NOT_FOUND,
+			h5TitleID:       NOT_FOUND,
+			hwdeTitleID:     NOT_FOUND,
+			hw2TitleID:      NOT_FOUND,
+			infiniteTitleID: NOT_FOUND,
+		}
+		legacyCompletionMap := map[string]GameStatus{
+			hceaTitleID:  NOT_FOUND,
+			h3TitleID:    NOT_FOUND,
+			hwTitleID:    NOT_FOUND,
+			odstTitleID:  NOT_FOUND,
+			reachTitleID: NOT_FOUND,
+			h4TitleID:    NOT_FOUND,
+		}
+		miscCompletionMap := map[string]GameStatus{
+			h2TitleID:       NOT_FOUND,
+			mccChinaTitleID: NOT_FOUND,
+			h5ForgeTitleID:  NOT_FOUND,
+		}
+
+		// These 2 little shits need their own maps due to the vast amount of title IDs they have
+		assaultCompletionMap := map[string]GameStatus{
+			hsaTitleID:     NOT_FOUND,
+			hsaXboxTitleID: NOT_FOUND,
+			hsa360TitleID:  NOT_FOUND,
+			hsaWPTitleID:   NOT_FOUND,
+			hsaIOSTitleID:  NOT_FOUND,
+		}
+		strikeCompletionMap := map[string]GameStatus{
+			hssTitleID:    NOT_FOUND,
+			hssWPTitleID:  NOT_FOUND,
+			hssIOSTitleID: NOT_FOUND,
+		}
+		/////////////////////////////////////////////////////////////////////////////////////////
+
+		for _, game := range gamesStats {
+			isDone := (game.Stats.CurrentGScore == game.Stats.TotalGScore) && (game.Stats.TotalGScore != 0) // Some games like SS and SA are bugged
+			if _, exists := modernCompletionMap[game.TitleID]; exists {
+				if isDone {
+					modernCompletionMap[game.TitleID] = COMPLETED
 				} else {
-					RespondFollowUpToInteraction(s, i.Interaction, "Sorry, you haven't finished MCC yet.")
-					return
+					modernCompletionMap[game.TitleID] = NOT_COMPLETED
 				}
 			}
-		}
-
-		RespondFollowUpToInteraction(s, i.Interaction, "You haven't played MCC before.")
-	}
-
-	slashCommandsHandlers["mcc-cn"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		LogCommand("mcc-cn", i.Member.User.Username)
-		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
-			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
-			return
-		}
-
-		if HasRole(i.Member, mccChinaRoleID) {
-			RespondToInteraction(s, i.Interaction, "You've already \"finished\" MCC China.")
-			return
-		}
-		RespondACKToInteraction(s, i.Interaction)
-
-		games, err := RequestPlayerAchievements(i.Member.User.ID)
-		if err != nil {
-			RespondFollowUpToInteraction(s, i.Interaction, err.Error())
-			return
-		}
-
-		for _, game := range games {
-			if game.TitleID == "812065290" {
-				if game.Stats.CurrentGScore == (game.Stats.TotalGScore - 90) { // MCC CN has 4 unobtainable achievements that are 90G in total
-					RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s \"finished\" MCC China! Congrats!", i.Member.DisplayName()))
-					s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, mccChinaRoleID)
-					return
+			if _, exists := legacyCompletionMap[game.TitleID]; exists {
+				if isDone {
+					legacyCompletionMap[game.TitleID] = COMPLETED
 				} else {
-					RespondFollowUpToInteraction(s, i.Interaction, "Sorry, you haven't \"finished\" MCC China yet.")
-					return
+					legacyCompletionMap[game.TitleID] = NOT_COMPLETED
 				}
 			}
-		}
-
-		RespondFollowUpToInteraction(s, i.Interaction, "You haven't played MCC China before.")
-	}
-
-	slashCommandsHandlers["infinite"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		LogCommand("infinite", i.Member.User.Username)
-		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
-			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
-			return
-		}
-
-		rolesMap := HasRoles(i.Member, []string{infiniteRoleID, modernRoleID, hcRoleID, fcRoleID})
-		if rolesMap[fcRoleID] {
-			RespondToInteraction(s, i.Interaction, "You've already finished Franchise Completionist, which requires Halo Infinite.")
-			return
-		}
-		if rolesMap[hcRoleID] {
-			RespondToInteraction(s, i.Interaction, "You've already finished Halo Completionist, which requires Halo Infinite.")
-			return
-		}
-		if rolesMap[modernRoleID] {
-			RespondToInteraction(s, i.Interaction, "You've already finished Modern Completionist, which requires Halo Infinite.")
-			return
-		}
-		if rolesMap[infiniteRoleID] {
-			RespondToInteraction(s, i.Interaction, "You've already finished Halo Infinite.")
-			return
-		}
-		RespondACKToInteraction(s, i.Interaction)
-
-		games, err := RequestPlayerAchievements(i.Member.User.ID)
-		if err != nil {
-			RespondFollowUpToInteraction(s, i.Interaction, err.Error())
-			return
-		}
-
-		for _, game := range games {
-			if game.Name == "Halo Infinite" {
-				if game.Stats.CurrentGScore == game.Stats.TotalGScore {
-					RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished Halo Infinite! Congrats!", i.Member.DisplayName()))
-					s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, infiniteRoleID)
-					return
+			if _, exists := miscCompletionMap[game.TitleID]; exists {
+				if game.TitleID == mccChinaTitleID {
+					isDone = (game.Stats.CurrentGScore == (game.Stats.TotalGScore - 90)) // MCC CN has 4 unobtainable achievements that are 90G in total
+				}
+				if isDone {
+					miscCompletionMap[game.TitleID] = COMPLETED
 				} else {
-					RespondFollowUpToInteraction(s, i.Interaction, "Sorry, you haven't finished Halo Infinite yet.")
-					return
+					miscCompletionMap[game.TitleID] = NOT_COMPLETED
 				}
 			}
-		}
-
-		RespondFollowUpToInteraction(s, i.Interaction, "You haven't played Halo Infinite before.")
-	}
-
-	slashCommandsHandlers["legacy"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		LogCommand("legacy", i.Member.User.Username)
-		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
-			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
-			return
-		}
-
-		rolesMap := HasRoles(i.Member, []string{legacyRoleID, fcRoleID})
-		if rolesMap[fcRoleID] {
-			RespondToInteraction(s, i.Interaction, "You've already finished Franchise Completionist, which replaces Legacy Completionist.")
-			return
-		}
-		if rolesMap[legacyRoleID] {
-			RespondToInteraction(s, i.Interaction, "You've already finished Legacy Completionist.")
-			return
-		}
-		RespondACKToInteraction(s, i.Interaction)
-
-		games, err := RequestPlayerAchievements(i.Member.User.ID)
-		if err != nil {
-			RespondFollowUpToInteraction(s, i.Interaction, err.Error())
-			return
-		}
-
-		completionMap := map[string]bool{
-			"Halo: Combat Evolved Anniversary": false,
-			"Halo 3":                           false,
-			"Halo Wars":                        false,
-			"Halo 3: ODST Campaign Edition":    false,
-			"Halo: Reach":                      false,
-			"Halo 4":                           false,
-		}
-		for _, game := range games {
-			if _, exists := completionMap[game.Name]; exists {
-				completionMap[game.Name] = (game.Stats.CurrentGScore == game.Stats.TotalGScore)
+			if _, exists := assaultCompletionMap[game.TitleID]; exists {
+				if isDone {
+					assaultCompletionMap[game.TitleID] = COMPLETED
+				} else {
+					assaultCompletionMap[game.TitleID] = NOT_COMPLETED
+				}
 			}
-		}
-
-		for _, isDone := range completionMap {
-			if !isDone {
-				failMsg := `**You're not eligible for the role**. Retry the command once you have all of the achievements in the listed games.
-
-You can find your current progress on the Legacy Completionist games below, **but please note that the following info is not saved, only checked in the moment**:
-**Halo Combat Evolved Anniversary** : %s
-**Halo 3** : %s
-**Halo Wars** : %s
-**Halo 3 ODST** : %s
-**Halo Reach** : %s
-**Halo 4** : %s`
-				failMsg = fmt.Sprintf(failMsg,
-					GetCompletionSymbol(completionMap["Halo: Combat Evolved Anniversary"]),
-					GetCompletionSymbol(completionMap["Halo 3"]),
-					GetCompletionSymbol(completionMap["Halo Wars"]),
-					GetCompletionSymbol(completionMap["Halo 3: ODST Campaign Edition"]),
-					GetCompletionSymbol(completionMap["Halo: Reach"]),
-					GetCompletionSymbol(completionMap["Halo 4"]),
-				)
-				RespondFollowUpToInteraction(s, i.Interaction, failMsg)
-				return
-			}
-		}
-
-		RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished Legacy Completionist! Congrats!", i.Member.DisplayName()))
-		s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, legacyRoleID)
-	}
-
-	slashCommandsHandlers["modern"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		LogCommand("modern", i.Member.User.Username)
-		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
-			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
-			return
-		}
-
-		rolesMap := HasRoles(i.Member, []string{modernRoleID, hcRoleID, fcRoleID})
-		if rolesMap[fcRoleID] {
-			RespondToInteraction(s, i.Interaction, "You've already finished Franchise Completionist, which replaces Modern Completionist.")
-			return
-		}
-		if rolesMap[hcRoleID] {
-			RespondToInteraction(s, i.Interaction, "You've already finished Halo Completionist, which replaces Modern Completionist.")
-			return
-		}
-		if rolesMap[modernRoleID] {
-			RespondToInteraction(s, i.Interaction, "You've already finished Modern Completionist.")
-			return
-		}
-		RespondACKToInteraction(s, i.Interaction)
-
-		games, err := RequestPlayerAchievements(i.Member.User.ID)
-		if err != nil {
-			RespondFollowUpToInteraction(s, i.Interaction, err.Error())
-			return
-		}
-
-		completionMap := map[string]bool{
-			"Halo: The Master Chief Collection":  false,
-			"Halo 5: Guardians":                  false,
-			"Halo Wars: Definitive Edition (PC)": false,
-			"Halo Wars 2":                        false,
-			"Halo Infinite":                      false,
-		}
-		for _, game := range games {
-			if completion, exists := completionMap[game.Name]; exists && !completion {
-				// Some games like MCC & MCC China have the same XBL name so we don't want to replace
-				// a true completion with a false completion which is why we check !completion
-				completionMap[game.Name] = (game.Stats.CurrentGScore == game.Stats.TotalGScore)
-			}
-		}
-
-		for _, isDone := range completionMap {
-			if !isDone {
-				failMsg := `**You're not eligible for the role**. Retry the command once you have all of the achievements in the listed games.
-
-You can find your current progress on the Modern Completionist games below, **but please note that the following info is not saved, only checked in the moment**:
-**Halo MCC** : %s
-**Halo 5 Guardians** : %s
-**Halo Wars Definitive Edition** : %s
-**Halo Wars 2** : %s
-**Halo Infinite** : %s
-
-Note: **If you finished everything and played any game on a non-XBL platform, please ping a staff member with screenshot proof in <#984079675385077820>.**`
-				failMsg = fmt.Sprintf(failMsg,
-					GetCompletionSymbol(completionMap["Halo: The Master Chief Collection"]),
-					GetCompletionSymbol(completionMap["Halo 5: Guardians"]),
-					GetCompletionSymbol(completionMap["Halo Wars: Definitive Edition (PC)"]),
-					GetCompletionSymbol(completionMap["Halo Wars 2"]),
-					GetCompletionSymbol(completionMap["Halo Infinite"]),
-				)
-				RespondFollowUpToInteraction(s, i.Interaction, failMsg)
-				return
-			}
-		}
-
-		RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished Modern Completionist! Congrats!", i.Member.DisplayName()))
-		s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, mccRoleID)
-		s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, infiniteRoleID)
-		s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, modernRoleID)
-	}
-
-	slashCommandsHandlers["hc"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		LogCommand("hc", i.Member.User.Username)
-		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
-			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
-			return
-		}
-
-		rolesMap := HasRoles(i.Member, []string{hcRoleID, fcRoleID})
-		if rolesMap[fcRoleID] {
-			RespondToInteraction(s, i.Interaction, "You've already finished Franchise Completionist, which replaces Halo Completionist.")
-			return
-		}
-		if rolesMap[hcRoleID] {
-			RespondToInteraction(s, i.Interaction, "You've already finished Halo Completionist.")
-			return
-		}
-		RespondACKToInteraction(s, i.Interaction)
-
-		games, err := RequestPlayerAchievements(i.Member.User.ID)
-		if err != nil {
-			RespondFollowUpToInteraction(s, i.Interaction, err.Error())
-			return
-		}
-
-		completionMap := map[string]bool{
-			"Halo: The Master Chief Collection":  false,
-			"Halo Wars":                          false,
-			"Halo Wars: Definitive Edition (PC)": false,
-			"Halo Wars 2":                        false,
-			"Halo: Spartan Strike":               false,
-			"Halo: Spartan Assault":              false,
-			"Halo Infinite":                      false,
-			"Halo 5: Guardians":                  false,
-			"Halo 5: Forge":                      false,
-		}
-		classicCompletionMap := map[string]bool{
-			"Halo: Combat Evolved Anniversary": false,
-			"Halo 2 (PC)":                      false,
-			"Halo 3":                           false,
-			"Halo 3: ODST Campaign Edition":    false,
-			"Halo: Reach":                      false,
-			"Halo 4":                           false,
-		}
-
-		for _, game := range games {
-			if completion, exists := completionMap[game.Name]; exists && !completion {
-				isBugged := game.Stats.TotalGScore == 0 // Some games like SS and SA are bugged
-
-				// Some games like MCC & MCC China (or SS/SA in this case)
-				// have the same XBL name so we don't want to replace
-				// a true completion with a false completion which is why we check !completion
-				completionMap[game.Name] = (game.Stats.CurrentGScore == game.Stats.TotalGScore) && !isBugged
+			if _, exists := strikeCompletionMap[game.TitleID]; exists {
+				if isDone {
+					strikeCompletionMap[game.TitleID] = COMPLETED
+				} else {
+					strikeCompletionMap[game.TitleID] = NOT_COMPLETED
+				}
 			}
 
-			if _, exists := classicCompletionMap[game.Name]; exists {
-				classicCompletionMap[game.Name] = (game.Stats.CurrentGScore == game.Stats.TotalGScore)
-			}
 		}
 
-		classicDone := true
-		for _, isDone := range classicCompletionMap {
-			if !isDone {
-				classicDone = false
+		progressMsg := `Role check done! If you fulfill any of the role requirements, the role has been assigned to you. You can check role requirements in <#984078260671483945>.
+
+You can find your current progress on the Halo games below, **but please note that the following info is not saved, only checked in the moment when you use this command**.
+Legend:
+- ❌: Game not found on your profile
+- 🔶: Not all achievements were obtained
+- ✅: All achievements obtained
+
+Modern games:
+- **Halo: The Master Chief Collection**: %s
+- **Halo 5: Guardians**: %s
+- **Halo Wars: Definitive Edition**: %s
+- **Halo Wars 2**: %s
+- **Halo Infinite**: %s
+
+Legacy games:
+- **Halo: Combat Evolved Anniversary**: %s
+- **Halo 3**: %s
+- **Halo Wars**: %s
+- **Halo 3: ODST**: %s
+- **Halo: Reach**: %s
+- **Halo 4**: %s
+
+Spartan Assault versions:
+- **Windows**: %s
+- **Xbox One/Series**: %s
+- **Xbox 360**: %s
+- **Windows Phone**: %s
+- **iOS**: %s
+
+Spartan Strike versions:
+- **Windows**: %s
+- **Windows Phone**: %s
+- **iOS**: %s
+
+Forgotten by the world:
+- **Halo 2 (Vista)**: %s
+- **Halo: The Master Chief Collection (China)**: %s
+- **Halo 5 Forge**: %s
+
+Note 1: **If your SA/SS games are marked as not found even if you played them, those achievements might be bugged on your profile. Post screenshot proof in <#984079675385077820> with the desired role name ONLY if it blocks you from obtaining the role**
+Note 2: **If you finished the requirements for a role but played any game on a non-XBL platform, post screenshot proof in <#984079675385077820> with the desired role name.**`
+		progressMsg = fmt.Sprintf(progressMsg,
+			GetCompletionSymbol(modernCompletionMap[mccTitleID]),
+			GetCompletionSymbol(modernCompletionMap[h5TitleID]),
+			GetCompletionSymbol(modernCompletionMap[hwdeTitleID]),
+			GetCompletionSymbol(modernCompletionMap[hw2TitleID]),
+			GetCompletionSymbol(modernCompletionMap[infiniteTitleID]),
+			GetCompletionSymbol(legacyCompletionMap[hceaTitleID]),
+			GetCompletionSymbol(legacyCompletionMap[h3TitleID]),
+			GetCompletionSymbol(legacyCompletionMap[hwTitleID]),
+			GetCompletionSymbol(legacyCompletionMap[odstTitleID]),
+			GetCompletionSymbol(legacyCompletionMap[reachTitleID]),
+			GetCompletionSymbol(legacyCompletionMap[h4TitleID]),
+			GetCompletionSymbol(assaultCompletionMap[hsaTitleID]),
+			GetCompletionSymbol(assaultCompletionMap[hsaXboxTitleID]),
+			GetCompletionSymbol(assaultCompletionMap[hsa360TitleID]),
+			GetCompletionSymbol(assaultCompletionMap[hsaWPTitleID]),
+			GetCompletionSymbol(assaultCompletionMap[hsaIOSTitleID]),
+			GetCompletionSymbol(strikeCompletionMap[hssTitleID]),
+			GetCompletionSymbol(strikeCompletionMap[hssWPTitleID]),
+			GetCompletionSymbol(strikeCompletionMap[hssIOSTitleID]),
+			GetCompletionSymbol(miscCompletionMap[h2TitleID]),
+			GetCompletionSymbol(miscCompletionMap[mccChinaTitleID]),
+			GetCompletionSymbol(miscCompletionMap[h5ForgeTitleID]),
+		)
+		RespondFollowUpToInteraction(s, i.Interaction, progressMsg)
+
+		// Give non-stackable roles first if eligible
+		legacyDone := true
+		for _, gameStatus := range legacyCompletionMap {
+			if gameStatus != COMPLETED {
+				legacyDone = false
+				break
+			}
+		}
+		if legacyDone {
+			s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, legacyRoleID)
+		}
+		if gameStatus := miscCompletionMap[mccChinaTitleID]; gameStatus == COMPLETED {
+			s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, mccChinaRoleID)
+		}
+		///////////////////////////////////////////
+
+		// Early exit as FC/HC holders don't need the checks below
+		if HasRole(i.Member, fcRoleID) || HasRole(i.Member, hcRoleID) {
+			return
+		}
+
+		// Check Assault and Strike individually as we only care about one version completion
+		assaultDone := false
+		for _, gameStatus := range assaultCompletionMap {
+			if gameStatus == COMPLETED {
+				assaultDone = true
+				break
+			}
+		}
+		strikeDone := false
+		for _, gameStatus := range strikeCompletionMap {
+			if gameStatus == COMPLETED {
+				strikeDone = true
 				break
 			}
 		}
 
-		for gameName, isDone := range completionMap {
-			if !isDone {
-				if gameName == "Halo: The Master Chief Collection" && classicDone {
-					continue
+		// Check role eligibility in the order of priority: HC -> Modern -> Infinite & MCC
+		modernDone := true
+		modernPartiallyDone := true
+		for titleID, gameStatus := range legacyCompletionMap {
+			if gameStatus != COMPLETED {
+				modernDone = false
+
+				// We can still use modern as a base for HC if we're only missing MCC and HWDE
+				if titleID != mccTitleID && titleID != hwdeTitleID {
+					modernPartiallyDone = false
 				}
-				if gameName == "Halo Wars" || gameName == "Halo Wars: Definitive Edition (PC)" {
-					if completionMap["Halo Wars"] || completionMap["Halo Wars: Definitive Edition (PC)"] {
-						//Just one of these is necessary
-						continue
-					}
-				}
-				failMsg := `**You're not eligible for the role**. Retry the command once you have all of the achievements in the listed games.
-
-You can find your current progress on the Halo Completionist games below, **but please note that the following info is not saved, only checked in the moment**:
-**Halo MCC** : %s
-**Halo Wars Definitive Edition** : %s  or  **Halo Wars** : %s
-**Halo 5 Guardians** : %s
-**Halo 5 Forge** : %s
-**Halo Spartan Assault** : %s
-**Halo Spartan Strike** : %s
-**Halo Wars 2** : %s
-**Halo Infinite** : %s
-
-Instead of **Halo MCC**, you can do:
-**Halo Combat Evolved Anniversary** : %s
-**Halo 2 (Vista)** : %s
-**Halo 3** : %s
-**Halo 3 ODST** : %s
-**Halo Reach** : %s
-**Halo 4** : %s
-
-Note 1: **If your SA/SS completion is not correct, those achievements might be bugged. Ping a staff member with screenshot proof in <#984079675385077820> if it blocks you from obtaining the role**
-Note 2: **If you finished everything and played any game on a non-XBL platform, please ping a staff member with screenshot proof in <#984079675385077820>.**`
-				failMsg = fmt.Sprintf(failMsg,
-					GetCompletionSymbol(completionMap["Halo: The Master Chief Collection"]),
-					GetCompletionSymbol(completionMap["Halo Wars: Definitive Edition (PC)"]),
-					GetCompletionSymbol(completionMap["Halo Wars"]),
-					GetCompletionSymbol(completionMap["Halo 5: Guardians"]),
-					GetCompletionSymbol(completionMap["Halo 5: Forge"]),
-					GetCompletionSymbol(completionMap["Halo: Spartan Assault"]),
-					GetCompletionSymbol(completionMap["Halo: Spartan Strike"]),
-					GetCompletionSymbol(completionMap["Halo Wars 2"]),
-					GetCompletionSymbol(completionMap["Halo Infinite"]),
-					GetCompletionSymbol(classicCompletionMap["Halo: Combat Evolved Anniversary"]),
-					GetCompletionSymbol(classicCompletionMap["Halo 2 (PC)"]),
-					GetCompletionSymbol(classicCompletionMap["Halo 3"]),
-					GetCompletionSymbol(classicCompletionMap["Halo 3: ODST Campaign Edition"]),
-					GetCompletionSymbol(classicCompletionMap["Halo: Reach"]),
-					GetCompletionSymbol(classicCompletionMap["Halo 4"]),
-				)
-				RespondFollowUpToInteraction(s, i.Interaction, failMsg)
-				return
 			}
 		}
+		if modernDone {
+			// Check SS, SA and Forge for HC eligibility
+			if miscCompletionMap[h5ForgeTitleID] == COMPLETED && assaultDone && strikeDone {
+				// Grant HC
+				s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, mccRoleID)
+				s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, infiniteRoleID)
+				s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, modernRoleID)
+				s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, hcRoleID)
+			} else {
+				// Grant Modern
+				s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, mccRoleID)
+				s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, infiniteRoleID)
+				s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, modernRoleID)
+			}
+		} else if modernPartiallyDone && miscCompletionMap[h5ForgeTitleID] == COMPLETED && assaultDone && strikeDone {
+			// We can still grant HC if we replace MCC with classic halos and HWDE with classic HW
+			grantHC := false
+			if legacyDone && miscCompletionMap[h2TitleID] == COMPLETED {
+				grantHC = true
+			} else {
+				// If we don't have all of the alternative games completed, we have to manually check to make sure we're still eligibile for HC
+				if modernCompletionMap[mccTitleID] != COMPLETED && modernCompletionMap[hwdeTitleID] == COMPLETED {
+					grantHC = (legacyCompletionMap[hceaTitleID] == COMPLETED) &&
+						(legacyCompletionMap[h3TitleID] == COMPLETED) &&
+						(legacyCompletionMap[odstTitleID] == COMPLETED) &&
+						(legacyCompletionMap[reachTitleID] == COMPLETED) &&
+						(legacyCompletionMap[h4TitleID] == COMPLETED) &&
+						(miscCompletionMap[h2TitleID] == COMPLETED)
 
-		RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Hey everyone! %s finished Halo Completionist! Congrats!", i.Member.DisplayName()))
-		s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, mccRoleID)
-		s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, infiniteRoleID)
-		s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, modernRoleID)
-		s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, hcRoleID)
+				} else if modernCompletionMap[mccTitleID] == COMPLETED && modernCompletionMap[hwdeTitleID] != COMPLETED {
+					grantHC = (legacyCompletionMap[hwTitleID] == COMPLETED)
+				}
+				// If both are not completed, then we don't have to check anymore as we need all legacy and h2v which is checked in the first if above
+			}
+
+			if grantHC {
+				s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, mccRoleID)
+				s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, infiniteRoleID)
+				s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, modernRoleID)
+				s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, hcRoleID)
+			} else {
+				// Grant Infinite as we have it done and couldn't give HC
+				s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, infiniteRoleID)
+			}
+		} else {
+			// Check MCC and Infinite eligibility
+			if modernCompletionMap[mccTitleID] == COMPLETED {
+				s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, mccRoleID)
+			}
+			if modernCompletionMap[infiniteTitleID] == COMPLETED {
+				s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, infiniteRoleID)
+			}
+		}
 	}
 
 	slashCommandsHandlers["riddle"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {

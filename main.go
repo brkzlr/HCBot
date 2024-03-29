@@ -12,6 +12,20 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+func clearCooldowns() {
+	var idsToRemove []string
+	cooldownLock.Lock()
+	for discordID, expirationTime := range cooldownMap {
+		if expirationTime.Before(time.Now()) {
+			idsToRemove = append(idsToRemove, discordID)
+		}
+	}
+	for _, ids := range idsToRemove {
+		delete(cooldownMap, ids)
+	}
+	cooldownLock.Unlock()
+}
+
 func saveDatabase() {
 	if !dirtyDatabase {
 		return
@@ -93,6 +107,7 @@ func main() {
 	for loop := true; loop; {
 		select {
 		case <-ticker.C:
+			clearCooldowns()
 			saveDatabase()
 			go KeepAliveRequest()
 		case <-achievTicker.C:
