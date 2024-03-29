@@ -280,8 +280,8 @@ func InitCommands(s *discordgo.Session) {
 You can find your current progress on the Halo games below, **but please note that the following info is not saved, only checked in the moment when you use this command**.
 Legend:
 - ❌: Game not found on your profile
-- 🔶: Not all achievements were obtained
-- ✅: All achievements obtained
+- 🔶: Not all obtainable achievements were earned
+- ✅: All obtainable achievements earned
 
 Modern games:
 - **Halo: The Master Chief Collection**: %s

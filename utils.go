@@ -56,7 +56,8 @@ func CheckLegacyAssaultStrikeAchievements(discordID string) (map[string]GameStat
 	// This means we either check against hardcoded numbers or call another endpoint which will give
 	// the total amount of achievements, which would double the number of calls per user to 14 just for SS/SA
 	const (
-		AssaultAchievCount    = 25 // Windows/WP/iOS
+		AssaultAchievCount    = 25 // Windows/WP
+		AssaultIOSAchievCount = 20 // 5 unobtainable achievements in iOS
 		Assault360AchievCount = 28
 		StrikeAchievCount     = 20 // Spartan Strike has 20 achievements on all 3 platforms
 	)
@@ -96,10 +97,9 @@ func CheckLegacyAssaultStrikeAchievements(discordID string) (map[string]GameStat
 		case hsaTitleID:
 			fallthrough
 		case hsaWPTitleID:
-			fallthrough
-		case hsaIOSTitleID:
 			achievCountToCheck = AssaultAchievCount
-
+		case hsaIOSTitleID:
+			achievCountToCheck = AssaultIOSAchievCount
 		case hsa360TitleID:
 			achievCountToCheck = Assault360AchievCount
 
