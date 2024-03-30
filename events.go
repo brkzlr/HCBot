@@ -45,20 +45,18 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
 	///////////////////////// Check for proof-of-completion channel misuse //////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
-	if m.ChannelID == proofChannelID && !IsStaff(m.Member) {
+	if m.ChannelID == proofChannelID && !IsStaff(m.Member) && !strings.Contains(msg, "manual check") {
 		if (strings.Contains(msg, "mcc") && !strings.Contains(msg, "master")) ||
 			strings.Contains(msg, "chief collection") ||
 			strings.Contains(msg, "infinite") ||
 			strings.Contains(msg, "legacy") ||
-			strings.Contains(msg, "modern") {
+			strings.Contains(msg, "modern") ||
+			strings.Contains(msg, "halo completionist") ||
+			strings.Contains(msg, "hc") {
 
-			str := fmt.Sprintf("<@%s> You can only obtain that role by using me in <#%s>! Check my slash commands in there to begin.", m.Author.ID, botChannelID)
+			str := fmt.Sprintf("<@%s> You can obtain that role **only** by using me in <#%s>! Use /rolecheck in there to begin.", m.Author.ID, botChannelID)
 			s.ChannelMessageSend(proofChannelID, str)
 			s.ChannelMessageDelete(proofChannelID, m.ID)
-			return
-		} else if strings.Contains(msg, "halo completionist") || strings.Contains(msg, "hc") {
-			str := fmt.Sprintf("Make sure you used the `/hc` command in <#%s> beforehand. This channel is only if SA/SS is bugged for you!", botChannelID)
-			ReplyToMsg(s, m.Message, str)
 			return
 		} else {
 			saidAcceptedWords := func(msg string) bool {
@@ -68,8 +66,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					strings.Contains(msg, "ice") ||
 					strings.Contains(msg, "fire") ||
 					strings.Contains(msg, "jacker") ||
-					strings.Contains(msg, "jackal") ||
-					strings.Contains(msg, "manual check")
+					strings.Contains(msg, "jackal")
 			}
 			for _, attach := range m.Attachments {
 				if attach != nil && attach.Height != 0 && !saidAcceptedWords(msg) { // Posted image but didn't say an acceptable proof role or keyword

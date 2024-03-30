@@ -307,7 +307,7 @@ Forgotten by the world:
 - **Halo: The Master Chief Collection (China)**: %s
 - **Halo 5 Forge**: %s
 
-Note 1: **If you finished the requirements for a role but played any game on a non-XBL platform, post screenshot proof in <#984079675385077820> with the desired role name.**`
+Note 1: **If you finished the requirements for a role but played one of the games on a non-XBL platform, post screenshot proof in <#984079675385077820> with the desired role name prepended with "Manual check:".**`
 		progressMsg = fmt.Sprintf(progressMsg,
 			GetCompletionSymbol(modernCompletionMap[mccTitleID]),
 			GetCompletionSymbol(modernCompletionMap[h5TitleID]),
