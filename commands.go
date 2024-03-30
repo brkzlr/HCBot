@@ -374,7 +374,7 @@ Note 1: **If you finished the requirements for a role but played one of the game
 		// Check role eligibility in the order of priority: HC -> Modern -> Infinite & MCC
 		modernDone := true
 		modernPartiallyDone := true
-		for titleID, gameStatus := range legacyCompletionMap {
+		for titleID, gameStatus := range modernCompletionMap {
 			if gameStatus != COMPLETED {
 				modernDone = false
 
