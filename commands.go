@@ -233,26 +233,24 @@ func InitCommands(s *discordgo.Session) {
 				} else {
 					modernCompletionMap[game.TitleID] = NOT_COMPLETED
 				}
-			}
-			if _, exists := legacyCompletionMap[game.TitleID]; exists {
+			} else if _, exists := legacyCompletionMap[game.TitleID]; exists {
 				if isDone {
 					legacyCompletionMap[game.TitleID] = COMPLETED
 				} else {
 					legacyCompletionMap[game.TitleID] = NOT_COMPLETED
 				}
-			}
-			if _, exists := miscCompletionMap[game.TitleID]; exists {
+			} else if _, exists := miscCompletionMap[game.TitleID]; exists {
 				if game.TitleID == mccChinaTitleID {
-					isDone = (game.Stats.CurrentGScore == (game.Stats.TotalGScore - 90)) // MCC CN has 4 unobtainable achievements that are 90G in total
+					// MCC CN has 4 unobtainable achievements that are 90G in total
+					isDone = (game.Stats.CurrentGScore == (game.Stats.TotalGScore - 90))
 				}
 				if isDone {
 					miscCompletionMap[game.TitleID] = COMPLETED
 				} else {
 					miscCompletionMap[game.TitleID] = NOT_COMPLETED
 				}
-			}
-			// We'll grab X1/XSX version of Spartan Assault here but check the other versions below
-			if game.TitleID == hsaXboxTitleID {
+			} else if game.TitleID == hsaXboxTitleID {
+				// We'll grab X1/XSX version of Spartan Assault here but check the other versions below
 				if isDone {
 					assaultCompletionMap[hsaXboxTitleID] = COMPLETED
 				} else {
