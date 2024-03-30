@@ -261,17 +261,11 @@ func InitCommands(s *discordgo.Session) {
 			}
 		}
 		for titleID := range assaultCompletionMap {
-			if titleID == hsaXboxTitleID {
-				continue
+			if titleID != hsaXboxTitleID {
+				assaultCompletionMap[titleID] = spartanGamesStats[titleID]
 			}
-
-			assaultCompletionMap[titleID] = spartanGamesStats[titleID]
 		}
 		for titleID := range strikeCompletionMap {
-			if titleID == hsaXboxTitleID {
-				continue
-			}
-
 			strikeCompletionMap[titleID] = spartanGamesStats[titleID]
 		}
 
