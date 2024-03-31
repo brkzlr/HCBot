@@ -48,6 +48,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.ChannelID == proofChannelID && !IsStaff(m.Member) && !strings.Contains(msg, "manual check") {
 		if (strings.Contains(msg, "mcc") && !strings.Contains(msg, "master")) ||
 			strings.Contains(msg, "chief collection") ||
+			strings.Contains(msg, "china") || strings.Contains(msg, "cn") ||
 			strings.Contains(msg, "infinite") ||
 			strings.Contains(msg, "legacy") ||
 			strings.Contains(msg, "modern") ||
