@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -446,7 +447,7 @@ Note: **If you fulfill the requirements for the Modern/Halo Completionist role b
 		riddle, err := GetRiddle()
 		if err != nil {
 			RespondToInteraction(s, i.Interaction, "Whoops, encountered an error while trying to find a riddle. Sorry!")
-			fmt.Println(err)
+			log.Println("Error while trying to obtain a riddle! ", err)
 			return
 		}
 

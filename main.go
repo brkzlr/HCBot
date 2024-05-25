@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -34,26 +34,31 @@ func saveDatabase() {
 
 	dbFile, err := os.Open("database.json")
 	if err != nil {
-		fmt.Println("Error opening database to save!")
+		log.Println("Error opening database to save! ", err)
 		return
 	}
 	defer dbFile.Close()
 
 	jsonMap, err := json.Marshal(databaseMap)
 	if err != nil {
-		fmt.Println("Error marshaling database!")
+		log.Println("Error marshaling database! ", err)
 		return
 	}
 
 	os.WriteFile("database.json", jsonMap, 0644)
-	fmt.Println("Saved database successfully!")
+	infoLog.Println("Saved database successfully!")
 	dirtyDatabase = false
 }
 
 var isTest bool
 var guildID string
+var infoLog log.Logger
 
 func init() {
+	// Setup logging
+	log.SetPrefix("ERROR: ")
+	infoLog = *log.New(os.Stdout, "INFO: ", log.LstdFlags)
+
 	// Parse flags
 	flag.BoolVar(&isTest, "test", false, "Flag to set testing mode, disabling stuff like cooldown functionality.")
 	flag.StringVar(&guildID, "guild", hcGuildID, "Flag to override default guild ID set to HC server.")
@@ -62,8 +67,7 @@ func init() {
 	// Grab Discord and OpenXBL Tokens
 	jsonFile, err := os.Open("tokens.json")
 	if err != nil {
-		fmt.Println("Error opening tokens.json! Aborting!")
-		return
+		log.Fatal("Error opening tokens.json! Aborting!")
 	}
 	defer jsonFile.Close()
 
@@ -73,8 +77,7 @@ func init() {
 	// Grab guild users' xuids
 	dbFile, err := os.Open("database.json")
 	if err != nil {
-		fmt.Println("Error opening database.json! Aborting!")
-		return
+		log.Fatal("Error opening database.json! Aborting!")
 	}
 	defer dbFile.Close()
 
@@ -87,8 +90,7 @@ func init() {
 func main() {
 	discord, err := discordgo.New("Bot " + tokens.Discord)
 	if err != nil {
-		fmt.Println("Error creating Discord session!", err)
-		return
+		log.Fatal("Error creating Discord session! ", err)
 	}
 
 	discord.Identify.Intents = discordgo.IntentsAllWithoutPrivileged | discordgo.IntentGuildMembers | discordgo.IntentMessageContent
@@ -96,18 +98,16 @@ func main() {
 
 	err = discord.Open()
 	if err != nil {
-		fmt.Println("Error opening connection!", err)
-		return
+		log.Fatal("Error opening connection! ", err)
 	}
 	defer discord.Close()
-	fmt.Println("Bot is now running!")
+	infoLog.Println("Bot is now running!")
 
 	err = InitCommands(discord)
 	if err != nil {
-		fmt.Println("Error initializing commands!", err)
-		return
+		log.Fatal("Error initializing commands! ", err)
 	}
-	fmt.Println("Commands initialised!")
+	infoLog.Println("Commands initialised!")
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
