@@ -63,7 +63,7 @@ func CheckLegacyAssaultStrikeAchievements(discordID string) (map[string]GameStat
 	)
 
 	// This function should never be called before RequestPlayerAchievements so we'll skip the checks
-	xbID := databaseMap[discordID]
+	xbID, _ := GetGamertagID(discordID)
 
 	for titleID := range gamesToCheck {
 		url := "https://xbl.io/api/v2/achievements/x360/" + xbID + "/title/" + titleID
@@ -125,7 +125,7 @@ func CheckLegacyAssaultStrikeAchievements(discordID string) (map[string]GameStat
 
 func CheckTimedAchievs(session *discordgo.Session) {
 	today := time.Now().UTC()
-	if today.Hour() != 9 || today.Minute() != 0 { //@todo: Find a better way to activate at 9 AM UTC
+	if today.Hour() != 9 || today.Minute() != 0 { // TODO: Find a better way to activate at 9 AM UTC
 		return
 	}
 
@@ -184,6 +184,13 @@ func GetCompletionSymbol(status GameStatus) string {
 	}
 
 	return "❔"
+}
+
+func GetGamertagID(discordID string) (xuid string, exists bool) {
+	databaseLock.Lock()
+	xuid, exists = databaseMap[discordID]
+	databaseLock.Unlock()
+	return
 }
 
 func GetRiddle() (Riddle, error) {
@@ -245,7 +252,6 @@ func LogCommand(cmdName, author string) {
 	fmt.Println(cmdName + " command used - " + author)
 }
 
-// Workaround until OpenXBL API changed for official Xbox API
 func KeepAliveRequest() {
 	req, _ := http.NewRequest("GET", "https://xbl.io/api/v2/account", nil)
 	req.Header.Add("X-Authorization", tokens.OpenXBL)
@@ -299,7 +305,7 @@ func RespondToInteractionEphemeral(s *discordgo.Session, i *discordgo.Interactio
 }
 
 func RequestPlayerAchievements(discordID string) ([]GameStatsResp, error) {
-	xbID, ok := databaseMap[discordID]
+	xbID, ok := GetGamertagID(discordID)
 	if !ok {
 		return nil, errors.New("Please set your gamertag first using the `/gamertag` command")
 	}
