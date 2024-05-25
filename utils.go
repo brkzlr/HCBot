@@ -249,7 +249,7 @@ func IsStaff(member *discordgo.Member) bool {
 }
 
 func LogCommand(cmdName, author string) {
-	fmt.Println(cmdName + " command used - " + author)
+	infoLog.Println(cmdName + " command used by " + author)
 }
 
 func KeepAliveRequest() {
