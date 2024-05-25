@@ -7,7 +7,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func InitCommands(s *discordgo.Session) {
+func InitCommands(s *discordgo.Session) error {
 	// Register each slash command to Discord
 	slashCommands = []*discordgo.ApplicationCommand{
 		{
@@ -16,7 +16,7 @@ func InitCommands(s *discordgo.Session) {
 		},
 		{
 			Name:        "gamertag",
-			Description: "Set your gamertag for subsequent completion role commands",
+			Description: "Set your gamertag for the /rolecheck command",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
@@ -28,7 +28,7 @@ func InitCommands(s *discordgo.Session) {
 		},
 		{
 			Name:        "rolecheck",
-			Description: "Checks and grants you roles according to your Halo game achievement completions",
+			Description: "Check and receive roles according to your Halo games achievements",
 		},
 		{
 			Name:        "riddle",
@@ -36,7 +36,7 @@ func InitCommands(s *discordgo.Session) {
 		},
 		{
 			Name:        "timestamp",
-			Description: "Generates a Unix timestamped message for you. Input time/date must be in UTC!",
+			Description: "Generate a Unix timestamped message from the bot. Input time/date must be in UTC!",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionInteger,
@@ -72,7 +72,7 @@ func InitCommands(s *discordgo.Session) {
 		},
 		{
 			Name:        "timestamp-relative",
-			Description: "Generates a Unix timestamped message for you. Input time is relative from your current time.",
+			Description: "Generate a Unix timestamped message from the bot. Input time is relative from your current time.",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionInteger,
@@ -95,9 +95,8 @@ func InitCommands(s *discordgo.Session) {
 			},
 		},
 	}
-	_, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, hcGuildID, slashCommands)
-	if err != nil {
-		fmt.Println(err)
+	if _, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, guildID, slashCommands); err != nil {
+		return err
 	}
 
 	// Create the handler for each slash command
@@ -147,7 +146,7 @@ func InitCommands(s *discordgo.Session) {
 
 	slashCommandsHandlers["gamertag"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("gamertag", i.Member.User.Username)
-		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
+		if !isTest && i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
 			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
 			return
 		}
@@ -165,11 +164,16 @@ func InitCommands(s *discordgo.Session) {
 
 	slashCommandsHandlers["rolecheck"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("rolecheck", i.Member.User.Username)
-		if i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
+		if !isTest && i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
 			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
 			return
 		}
 		RespondACKToInteraction(s, i.Interaction)
+
+		if onCooldown, duration := CheckCooldown(i.Member.User.ID); onCooldown {
+			RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Sorry! You're on cooldown for this command. Remaining duration: %s", duration.String()))
+			return
+		}
 
 		gamesStats, err := RequestPlayerAchievements(i.Member.User.ID)
 		if err != nil {
@@ -182,10 +186,7 @@ func InitCommands(s *discordgo.Session) {
 			return
 		}
 
-		if onCooldown, duration := CheckCooldown(i.Member.User.ID); onCooldown {
-			RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Sorry! You're on cooldown for this command. Remaining duration: %v", duration))
-			return
-		} else if !IsStaff(i.Member) {
+		if !isTest && !IsStaff(i.Member) {
 			AddRoleCheckCooldown(i.Member.User.ID)
 		}
 
@@ -504,4 +505,5 @@ Note: **If you fulfill the requirements for the Modern/Halo Completionist role b
 			handler(s, i)
 		}
 	})
+	return nil
 }

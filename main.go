@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -49,7 +50,15 @@ func saveDatabase() {
 	dirtyDatabase = false
 }
 
+var isTest bool
+var guildID string
+
 func init() {
+	// Parse flags
+	flag.BoolVar(&isTest, "test", false, "Flag to set testing mode, disabling stuff like cooldown functionality.")
+	flag.StringVar(&guildID, "guild", hcGuildID, "Flag to override default guild ID set to HC server.")
+	flag.Parse()
+
 	// Grab Discord and OpenXBL Tokens
 	jsonFile, err := os.Open("tokens.json")
 	if err != nil {
@@ -93,7 +102,11 @@ func main() {
 	defer discord.Close()
 	fmt.Println("Bot is now running!")
 
-	InitCommands(discord)
+	err = InitCommands(discord)
+	if err != nil {
+		fmt.Println("Error initializing commands!", err)
+		return
+	}
 	fmt.Println("Commands initialised!")
 
 	sc := make(chan os.Signal, 1)
@@ -104,7 +117,8 @@ func main() {
 	defer ticker.Stop()
 	defer achievTicker.Stop()
 
-	for loop := true; loop; {
+MainLoop:
+	for {
 		select {
 		case <-ticker.C:
 			clearCooldowns()
@@ -113,11 +127,10 @@ func main() {
 		case <-achievTicker.C:
 			CheckTimedAchievs(discord)
 		case <-sc:
-			loop = false
+			break MainLoop
 		}
 	}
 
-	// V this might not be even needed V
-	discord.ApplicationCommandBulkOverwrite(discord.State.User.ID, hcGuildID, nil) // Delete all application (slash) commands
+	discord.ApplicationCommandBulkOverwrite(discord.State.User.ID, guildID, nil) // Delete all application (slash) commands
 	saveDatabase()
 }
