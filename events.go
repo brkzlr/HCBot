@@ -16,7 +16,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 	if m.ChannelID == dropsChannelID && m.Author.ID == "1102708418407583794" && !isTimerActive {
 		isTimerActive = true
-		time.AfterFunc(5*time.Minute, func() {
+		time.AfterFunc(10*time.Minute, func() {
 			replyStr := fmt.Sprintf("Hey <@&%s>! Check out this ^ drop/giveaway.", dropsRoleID)
 			ReplyToMsg(s, m.Message, replyStr)
 			isTimerActive = false

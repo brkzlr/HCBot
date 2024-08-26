@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -30,70 +28,6 @@ func InitCommands(s *discordgo.Session) error {
 		{
 			Name:        "rolecheck",
 			Description: "Check and receive roles according to your Halo games achievements",
-		},
-		{
-			Name:        "riddle",
-			Description: "Get a random riddle from the internet",
-		},
-		{
-			Name:        "timestamp",
-			Description: "Generate a Unix timestamped message from the bot. Input time/date must be in UTC!",
-			Options: []*discordgo.ApplicationCommandOption{
-				{
-					Type:        discordgo.ApplicationCommandOptionInteger,
-					Name:        "hour",
-					Description: "Specify the hour in UTC.",
-					Required:    true,
-				},
-				{
-					Type:        discordgo.ApplicationCommandOptionInteger,
-					Name:        "minute",
-					Description: "Specify the minute in UTC.",
-					Required:    true,
-				},
-				{
-					Type:        discordgo.ApplicationCommandOptionInteger,
-					Name:        "day",
-					Description: "Day of the date. If unspecified, it will be the current day at UTC time.",
-					Required:    false,
-				},
-				{
-					Type:        discordgo.ApplicationCommandOptionInteger,
-					Name:        "month",
-					Description: "Month of the date. If unspecified, it will be the current month at UTC time.",
-					Required:    false,
-				},
-				{
-					Type:        discordgo.ApplicationCommandOptionInteger,
-					Name:        "year",
-					Description: "Year of the date. If unspecified, it will be the current year at UTC time.",
-					Required:    false,
-				},
-			},
-		},
-		{
-			Name:        "timestamp-relative",
-			Description: "Generate a Unix timestamped message from the bot. Input time is relative from your current time.",
-			Options: []*discordgo.ApplicationCommandOption{
-				{
-					Type:        discordgo.ApplicationCommandOptionInteger,
-					Name:        "days",
-					Description: "How many days from this moment.",
-					Required:    true,
-				},
-				{
-					Type:        discordgo.ApplicationCommandOptionInteger,
-					Name:        "hours",
-					Description: "How many hours from this moment.",
-					Required:    true,
-				},
-				{
-					Type:        discordgo.ApplicationCommandOptionInteger,
-					Name:        "minutes",
-					Description: "How many minutes from this moment.",
-					Required:    true,
-				},
-			},
 		},
 	}
 	if _, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, guildID, slashCommands); err != nil {
@@ -439,66 +373,6 @@ Note: **If you fulfill the requirements for the Modern/Halo Completionist role b
 				s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, infiniteRoleID)
 			}
 		}
-	}
-
-	slashCommandsHandlers["riddle"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		LogCommand("riddle", i.Member.User.Username)
-
-		riddle, err := GetRiddle()
-		if err != nil {
-			RespondToInteraction(s, i.Interaction, "Whoops, encountered an error while trying to find a riddle. Sorry!")
-			log.Println("Error while trying to obtain a riddle! ", err)
-			return
-		}
-
-		RespondToInteraction(s, i.Interaction, riddle.Question+"\n\nAnswer will be revealed in one minute.")
-
-		time.Sleep(1 * time.Minute)
-		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-			Content: riddle.Answer,
-		})
-	}
-
-	slashCommandsHandlers["timestamp"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		LogCommand("timestamp", i.Member.User.Username)
-
-		hour := int(i.ApplicationCommandData().Options[0].IntValue())
-		minute := int(i.ApplicationCommandData().Options[1].IntValue())
-
-		day := time.Now().UTC().Day()
-		month := time.Now().UTC().Month()
-		year := time.Now().UTC().Year()
-		for index, option := range i.ApplicationCommandData().Options {
-			if index < 2 {
-				continue
-			}
-			switch option.Name {
-			case "day":
-				day = int(option.IntValue())
-			case "month":
-				month = time.Month(option.IntValue())
-			case "year":
-				year = int(option.IntValue())
-			}
-		}
-
-		unixTimestamp := time.Date(year, month, day, hour, minute, 0, 0, time.UTC).Unix()
-		RespondToInteraction(s, i.Interaction, fmt.Sprintf("%s's specified time is <t:%d> which is <t:%d:R>.", i.Member.DisplayName(), unixTimestamp, unixTimestamp))
-	}
-
-	slashCommandsHandlers["timestamp-relative"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		LogCommand("relative timestamp", i.Member.User.Username)
-
-		days := int(i.ApplicationCommandData().Options[0].IntValue())
-		hours := i.ApplicationCommandData().Options[1].IntValue()
-		minutes := i.ApplicationCommandData().Options[2].IntValue()
-
-		currentTime := time.Now().UTC()
-		hoursDuration, _ := time.ParseDuration(fmt.Sprintf("%dh%dm", hours, minutes))
-		futureTime := currentTime.Add(hoursDuration).AddDate(0, 0, days)
-
-		unixTimestamp := futureTime.Unix()
-		RespondToInteraction(s, i.Interaction, fmt.Sprintf("%s's specified time is <t:%d> which is <t:%d:R>.", i.Member.DisplayName(), unixTimestamp, unixTimestamp))
 	}
 
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {

@@ -193,23 +193,6 @@ func GetGamertagID(discordID string) (xuid string, exists bool) {
 	return
 }
 
-func GetRiddle() (Riddle, error) {
-	resp, err := http.Get("https://riddles-api.vercel.app/random")
-	if err != nil {
-		return Riddle{"", ""}, err
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-
-	var riddleResp Riddle
-	if err = json.Unmarshal(body, &riddleResp); err != nil {
-		return Riddle{"", ""}, err
-	}
-
-	return riddleResp, err
-}
-
 func HasRole(member *discordgo.Member, roleID string) bool {
 	for _, id := range member.Roles {
 		if id == roleID {
