@@ -22,7 +22,7 @@ const (
 	botChannelID   = "984075793904848916"
 	proofChannelID = "984079675385077820"
 
-	dropsChannelID = "984078138332028969"
+	dropsChannelID = "1287497808244637696"
 	dropsRoleID    = "984088663946326018"
 
 	hcGuildID = "984075026816991252"
