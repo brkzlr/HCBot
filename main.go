@@ -84,7 +84,7 @@ func init() {
 	fileByte, _ = io.ReadAll(dbFile)
 	json.Unmarshal(fileByte, &databaseMap)
 
-	go KeepAliveRequest() //Do a simple request to OpenXBL so token is authenticated
+	go KeepAliveRequest() // Do a simple request to OpenXBL so token is authenticated
 }
 
 func main() {
@@ -95,6 +95,7 @@ func main() {
 
 	discord.Identify.Intents = discordgo.IntentsAllWithoutPrivileged | discordgo.IntentGuildMembers | discordgo.IntentMessageContent
 	discord.AddHandler(messageCreate)
+	discord.AddHandler(messageReactionAdd)
 
 	err = discord.Open()
 	if err != nil {

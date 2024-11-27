@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"regexp"
 	"strings"
 	"time"
 
@@ -9,6 +11,33 @@ import (
 )
 
 var isTimerActive bool
+
+func messageReactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
+	if m.Emoji.ID != "1117969363627159622" {
+		return
+	}
+	message, err := s.ChannelMessage(m.ChannelID, m.MessageID)
+	if err != nil {
+		log.Println("Error retrieving message for reaction checking!")
+		return
+	}
+	if message.Author.ID != s.State.User.ID {
+		return
+	}
+	if !strings.Contains(message.Content, "Remember to grab your") {
+		return
+	}
+
+	regex := regexp.MustCompile("<@&(\\d+)>")
+	roleID := regex.FindStringSubmatch(message.Content)[1]
+
+	err = s.GuildMemberRoleRemove(guildID, m.UserID, roleID)
+	if err != nil {
+		log.Printf("Error removing timed role (ID: %s) from user %s\n", roleID, m.Member.User.Username)
+		return
+	}
+	infoLog.Printf("Successfully removed timed role (ID: %s) from user %s\n", roleID, m.Member.User.Username)
+}
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
@@ -31,11 +60,11 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	// Should probably move these blocks below into their own function
+	msg := strings.ToLower(m.Content)
+
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
 	///////////////////////////////////// Check for discord invites /////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
-	msg := strings.ToLower(m.Content)
 	if !IsStaff(m.Member) &&
 		(strings.Contains(msg, "discord.gg/") || strings.Contains(msg, "discord.com/invite/")) {
 		s.ChannelMessageDelete(m.ChannelID, m.ID)
@@ -79,5 +108,4 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 		}
 	}
-	/////////////////////////////////////////////////////////////////////////////////////////////////////
 }

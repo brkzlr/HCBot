@@ -2,7 +2,7 @@ module BrK/HC
 
 go 1.21
 
-require github.com/bwmarrin/discordgo v0.28.1
+require github.com/bwmarrin/discordgo v0.28.2-0.20241006165315-247b6f7a76f9
 
 require (
 	github.com/gorilla/websocket v1.5.1 // indirect

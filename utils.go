@@ -130,23 +130,21 @@ func CheckTimedAchievs(session *discordgo.Session) {
 	}
 
 	targetChannelID := "984160204440633454" // general-mcc channel ID
-	if timedRole, exists := timedAchievRoles[today.Day()]; exists {
-		session.ChannelMessageSend(targetChannelID,
-			fmt.Sprintf("Remember to grab your <@&%d> achievement today! Simply start up a mission or load into a multiplayer game in %s", timedRole.ID, timedRole.Game))
-	}
+	baseText := "Remember to grab your <@&%d> achievement today! %s\n\n***If this message helped you get the achievement, make sure to react with <:pepeok:1117969363627159622> so I can remove the role from you!***"
 
+	if timedRole, exists := timedAchievRoles[today.Day()]; exists {
+		specificText := fmt.Sprintf("Simply start up a mission or load into a multiplayer game in %s", timedRole.Game)
+		session.ChannelMessageSend(targetChannelID, fmt.Sprintf(baseText, timedRole.ID, specificText))
+	}
 	for _, date := range destinationVacationDates {
 		if today.Day() == date.Day && today.Month() == date.Month {
-			session.ChannelMessageSend(targetChannelID,
-				"Remember to grab your <@&990602317575368724> Achievement today! Simply load up a Custom Game on Halo 2 Classic Zanzibar, go to the beach and look at the sign next to the water!")
+			session.ChannelMessageSend(targetChannelID, fmt.Sprintf(baseText, 990602317575368724, "Simply load up a Custom Game on Halo 2 Classic Zanzibar, go to the beach and look at the sign next to the water!"))
 			break
 		}
 	}
-
 	for _, date := range elderSignsDates {
 		if today.Day() == date.Day && today.Month() == date.Month {
-			session.ChannelMessageSend(targetChannelID,
-				"Remember to grab your <@&990602348659363850> Achievement today! Simply load up a Custom Game on Halo 3 Valhalla and look at the Sigil on the wall. Remember you need to have looked at 2 different ones for it to unlock!")
+			session.ChannelMessageSend(targetChannelID, fmt.Sprintf(baseText, 990602348659363850, "Simply load up a Custom Game on Halo 3 Valhalla and look at the Sigil on the wall. Remember you need to have looked at 2 different ones for it to unlock!"))
 			break
 		}
 	}
@@ -155,11 +153,11 @@ func CheckTimedAchievs(session *discordgo.Session) {
 func GetAllGuildMembers(s *discordgo.Session, guildID string) []*discordgo.Member {
 	guildMembers, _ := s.GuildMembers(guildID, "", 1000)
 
-	//Discord API can only return a maximum of 1000 members.
-	//To get all the members for guilds that have more than this limit
-	//we check the length of the returned slice and if it's 1000 we try to grab
-	//the next 1000 starting from the last member in the previous request using it's ID,
-	//repeating this until we get a slice with less than 1000.
+	// Discord API can only return a maximum of 1000 members.
+	// To get all the members for guilds that have more than this limit
+	// we check the length of the returned slice and if it's 1000 we try to grab
+	// the next 1000 starting from the last member in the previous request using it's ID,
+	// repeating this until we get a slice with less than 1000.
 	gotAll := len(guildMembers) < 1000
 	for !gotAll {
 		lastID := guildMembers[len(guildMembers)-1].User.ID
@@ -171,6 +169,10 @@ func GetAllGuildMembers(s *discordgo.Session, guildID string) []*discordgo.Membe
 	}
 
 	return guildMembers
+}
+
+func GetAsPtr[T any](v T) *T {
+	return &v
 }
 
 func GetCompletionSymbol(status GameStatus) string {
@@ -245,8 +247,8 @@ func KeepAliveRequest() {
 	if resp != nil {
 		resp.Body.Close()
 	}
-	//We don't care about the result, we just want to do a GET request on OpenXBL
-	//so our token gets refreshed and future requests after idling won't fail
+	// We don't care about the result, we just want to do a GET request on OpenXBL
+	// so our token gets refreshed and future requests after idling won't fail
 }
 
 func ReplyToMsg(s *discordgo.Session, m *discordgo.Message, replyMsg string) (*discordgo.Message, error) {
@@ -259,6 +261,12 @@ func ReplyToMsg(s *discordgo.Session, m *discordgo.Message, replyMsg string) (*d
 func RespondACKToInteraction(s *discordgo.Session, i *discordgo.Interaction) error {
 	return s.InteractionRespond(i, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+	})
+}
+
+func RespondACKPing(s *discordgo.Session, i *discordgo.Interaction) error {
+	return s.InteractionRespond(i, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponsePong,
 	})
 }
 
@@ -329,7 +337,7 @@ func RequestPlayerAchievements(discordID string) ([]GameStatsResp, error) {
 }
 
 func RequestPlayerGT(gamerTag string) (string, error) {
-	//Gamertags with a suffix should not include the hashtag
+	// Gamertags with a suffix should not include the hashtag
 	urlTag := strings.ReplaceAll(gamerTag, "#", "")
 	urlTag = strings.ReplaceAll(urlTag, " ", "%20")
 	url := "https://xbl.io/api/v2/friends/search?gt=" + urlTag
