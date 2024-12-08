@@ -309,7 +309,7 @@ func RespondToInteractionEphemeral(s *discordgo.Session, i *discordgo.Interactio
 func RequestPlayerAchievements(discordID string) ([]GameStatsResp, error) {
 	xbID, ok := GetGamertagID(discordID)
 	if !ok {
-		return nil, errors.New("Please set your gamertag first using the `/gamertag` command")
+		return nil, errors.New("Your gamertag is missing from the database! Please set your gamertag first using the `/gamertag` command.")
 	}
 
 	url := "https://xbl.io/api/v2/achievements/player/" + xbID

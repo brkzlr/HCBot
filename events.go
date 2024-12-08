@@ -74,7 +74,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
 	///////////////////////// Check for proof-of-completion channel misuse //////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
-	if m.ChannelID == proofChannelID && !IsStaff(m.Member) && !strings.Contains(msg, "manual check") {
+	if m.ChannelID == proofChannelID && !IsStaff(m.Member) && !strings.Contains(msg, "manual check: modern") && !strings.Contains(msg, "manual check: halo") {
 		if (strings.Contains(msg, "mcc") && !strings.Contains(msg, "master")) ||
 			strings.Contains(msg, "chief collection") ||
 			strings.Contains(msg, "china") || strings.Contains(msg, "cn") ||
