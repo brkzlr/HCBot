@@ -25,6 +25,17 @@ func AddRoleCheckCooldown(discordID string) {
 	cooldownLock.Unlock()
 }
 
+func AppendRoleName(rolesString *string, roleName string) {
+	if rolesString == nil {
+		return
+	}
+	if *rolesString == "" {
+		*rolesString = roleName
+	} else {
+		*rolesString += fmt.Sprintf(", %s", roleName)
+	}
+}
+
 func CheckCooldown(discordID string) (bool, time.Duration) {
 	cooldownLock.Lock()
 	expirationTime, exists := cooldownMap[discordID]
