@@ -108,4 +108,16 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 		}
 	}
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////// Check for wrong reach-mcc messages ///////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////////
+	if m.ChannelID == reachChannelID && !IsStaff(m.Member) {
+		if strings.Contains(msg, "skunked") || (strings.Contains(msg, "negative") && strings.Contains(msg, "ghostrider")) {
+			str := fmt.Sprintf("<@%s> That achievement is a multiplayer achievement. You should use <#984080289242427413> for multiplayer achievements!\n\n***Make sure to check pinned posts in the respective channel beforehand!***.", m.Author.ID)
+			s.ChannelMessageSend(reachChannelID, str)
+			s.ChannelMessageDelete(reachChannelID, m.ID)
+			return
+		}
+	}
 }
