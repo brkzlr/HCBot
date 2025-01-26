@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -315,7 +316,8 @@ func RequestPlayerAchievements(discordID string) ([]GameStatsResp, error) {
 	url := "https://xbl.io/api/v2/achievements/player/" + xbID
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, err
+		log.Println("Error in creating achievements GET request: ", err)
+		return nil, errors.New("Whoops! Sorry, internal error. Please try again!")
 	}
 
 	req.Header.Add("X-Authorization", tokens.OpenXBL)
@@ -323,7 +325,8 @@ func RequestPlayerAchievements(discordID string) ([]GameStatsResp, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, errors.New("Whoops! Server responded with an error! Apologies, please try again!")
+		log.Println("Error in achievements GET request: ", err)
+		return nil, errors.New("Error trying to contact the server! Please try again later!")
 	}
 	defer resp.Body.Close()
 
@@ -331,13 +334,15 @@ func RequestPlayerAchievements(discordID string) ([]GameStatsResp, error) {
 	var objMap map[string]json.RawMessage
 	err = decoder.Decode(&objMap)
 	if err != nil {
-		return nil, errors.New("Whoops! Server responded with an error! Apologies, please try again!")
+		log.Println("Error in achievements JSON response: ", err)
+		return nil, errors.New("Server responded with garbage! It's not your fault, please try again!")
 	}
 
 	var gamesStats []GameStatsResp
 	err = json.Unmarshal(objMap["titles"], &gamesStats)
 	if err != nil {
-		return nil, errors.New("Whoops! Server responded with an error! Apologies, please try again!")
+		log.Println("Error in achievements JSON unmarshal: ", err)
+		return nil, errors.New("Server responded with garbage! It's not your fault, please try again!")
 	}
 
 	if len(gamesStats) == 0 {
@@ -355,7 +360,8 @@ func RequestPlayerGT(gamerTag string) (string, error) {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return "", err
+		log.Println("Error in creating gamertag GET request: ", err)
+		return "", errors.New("Whoops! Sorry, internal error. Please try again!")
 	}
 
 	req.Header.Add("X-Authorization", tokens.OpenXBL)
@@ -363,7 +369,8 @@ func RequestPlayerGT(gamerTag string) (string, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", errors.New("Whoops! Server responded with an error! Apologies, please try again!")
+		log.Println("Error in gamertag GET request: ", err)
+		return "", errors.New("Error trying to contact the server! Please try again later!")
 	}
 	defer resp.Body.Close()
 
@@ -371,7 +378,8 @@ func RequestPlayerGT(gamerTag string) (string, error) {
 	var objMap map[string]json.RawMessage
 	err = decoder.Decode(&objMap)
 	if err != nil {
-		return "", errors.New("Server responded with garbage! Not your fault. Please try again now!")
+		log.Println("Error in gamertag JSON response: ", err)
+		return "", errors.New("Server responded with garbage! It's not your fault, please try again!")
 	}
 
 	var respID []GTResp
