@@ -8,7 +8,7 @@ import (
 
 func InitCommands(s *discordgo.Session) error {
 	// Register each slash command to Discord
-	slashCommands = []*discordgo.ApplicationCommand{
+	appCommands = []*discordgo.ApplicationCommand{
 		{
 			Name:        "count",
 			Description: "Show the number of users of each completion role",
@@ -109,13 +109,18 @@ func InitCommands(s *discordgo.Session) error {
 				},
 			},
 		},
+		{
+			Name:                     "removereactions",
+			DefaultMemberPermissions: GetAsPtr[int64](discordgo.PermissionManageGuildExpressions),
+			Type:                     discordgo.MessageApplicationCommand,
+		},
 	}
-	if _, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, guildID, slashCommands); err != nil {
+	if _, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, guildID, appCommands); err != nil {
 		return err
 	}
 
 	// Create the handler for each slash command
-	slashCommandsHandlers["count"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	appCommandsHandlers["count"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("count", i.Member.User.Username)
 		rolesToCheck := []string{mccRoleID, mccChinaRoleID, infiniteRoleID, modernRoleID, legacyRoleID, lasochistRoleID, mccMasterRoleID, hcRoleID, fcRoleID}
 
@@ -159,7 +164,7 @@ func InitCommands(s *discordgo.Session) error {
 		RespondToInteraction(s, i.Interaction, resultMsg)
 	}
 
-	slashCommandsHandlers["gamertag"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	appCommandsHandlers["gamertag"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("gamertag", i.Member.User.Username)
 		if !isTest && i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
 			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
@@ -177,7 +182,7 @@ func InitCommands(s *discordgo.Session) error {
 		RespondToInteraction(s, i.Interaction, fmt.Sprintf("Gamertag set to \"%s\".", gTag))
 	}
 
-	slashCommandsHandlers["rolecheck"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	appCommandsHandlers["rolecheck"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("rolecheck", i.Member.User.Username)
 		if !isTest && i.ChannelID != botChannelID && i.ChannelID != "1026542051287892009" {
 			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("This command is usable only in <#%s>!", botChannelID))
@@ -474,7 +479,7 @@ Note: **If you fulfill the requirements for the Modern/Halo Completionist role b
 		}
 	}
 
-	slashCommandsHandlers["bulkdelete"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	appCommandsHandlers["bulkdelete"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("bulkdelete", i.Member.User.Username)
 
 		limit := 0
@@ -530,7 +535,7 @@ Note: **If you fulfill the requirements for the Modern/Halo Completionist role b
 		RespondToInteractionEphemeral(s, i.Interaction, "Successfully deleted messages!")
 	}
 
-	slashCommandsHandlers["muteinchannel"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	appCommandsHandlers["muteinchannel"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("muteinchannel", i.Member.User.Username)
 
 		userID := i.ApplicationCommandData().Options[0].StringValue()
@@ -544,7 +549,7 @@ Note: **If you fulfill the requirements for the Modern/Halo Completionist role b
 		RespondToInteractionEphemeral(s, i.Interaction, "Successfully removed user's ability to message in this channel!")
 	}
 
-	slashCommandsHandlers["unmuteinchannel"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	appCommandsHandlers["unmuteinchannel"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("unmuteinchannel", i.Member.User.Username)
 
 		userID := i.ApplicationCommandData().Options[0].StringValue()
@@ -558,7 +563,7 @@ Note: **If you fulfill the requirements for the Modern/Halo Completionist role b
 		RespondToInteractionEphemeral(s, i.Interaction, "Successfully restored user's ability to message in this channel!")
 	}
 
-	slashCommandsHandlers["warnwrongchannel"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	appCommandsHandlers["warnwrongchannel"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("warnwrongchannel", i.Member.User.Username)
 
 		messageID := ""
@@ -595,8 +600,21 @@ Note: **If you fulfill the requirements for the Modern/Halo Completionist role b
 		RespondToInteractionEphemeral(s, i.Interaction, "Successfully warned the user!")
 	}
 
+	appCommandsHandlers["removereactions"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		LogCommand("removereactions", i.Member.User.Username)
+
+		message := i.ApplicationCommandData().Resolved.Messages[i.ApplicationCommandData().TargetID]
+		if message == nil {
+			return
+		}
+		RespondACKPing(s, i.Interaction)
+
+		s.MessageReactionsRemoveAll(message.ChannelID, message.ID)
+		RespondToInteractionEphemeral(s, i.Interaction, "Successfully removed all reactions from the message!")
+	}
+
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		if handler, exists := slashCommandsHandlers[i.ApplicationCommandData().Name]; exists {
+		if handler, exists := appCommandsHandlers[i.ApplicationCommandData().Name]; exists {
 			handler(s, i)
 		}
 	})

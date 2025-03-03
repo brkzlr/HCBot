@@ -62,15 +62,15 @@ var (
 		OpenXBL string `json:"xblToken"`
 	}
 
-	slashCommandsHandlers = make(map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate))
+	appCommandsHandlers = make(map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate))
 
 	databaseMap   map[string]string
 	dirtyDatabase bool
 	databaseLock  sync.Mutex
 
-	slashCommands []*discordgo.ApplicationCommand
-	cooldownMap   = make(map[string]time.Time)
-	cooldownLock  sync.Mutex
+	appCommands  []*discordgo.ApplicationCommand
+	cooldownMap  = make(map[string]time.Time)
+	cooldownLock sync.Mutex
 )
 
 // Timed achievements variables
