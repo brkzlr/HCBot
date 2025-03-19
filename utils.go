@@ -141,22 +141,21 @@ func CheckTimedAchievs(session *discordgo.Session) {
 		return
 	}
 
-	targetChannelID := "984160204440633454" // general-mcc channel ID
 	baseText := "Remember to grab your <@&%d> achievement today! %s\n\n***If this message helped you get the achievement, make sure to react with <:pepeok:1117969363627159622> so I can remove the role from you!***"
 
 	if timedRole, exists := timedAchievRoles[today.Day()]; exists {
 		specificText := fmt.Sprintf("Simply start up a mission or load into a multiplayer game in %s", timedRole.Game)
-		session.ChannelMessageSend(targetChannelID, fmt.Sprintf(baseText, timedRole.ID, specificText))
+		session.ChannelMessageSend(generalMccChannelID, fmt.Sprintf(baseText, timedRole.ID, specificText))
 	}
 	for _, date := range destinationVacationDates {
 		if today.Day() == date.Day && today.Month() == date.Month {
-			session.ChannelMessageSend(targetChannelID, fmt.Sprintf(baseText, 990602317575368724, "Simply load up a Custom Game on Halo 2 Classic Zanzibar, go to the beach and look at the sign next to the water!"))
+			session.ChannelMessageSend(generalMccChannelID, fmt.Sprintf(baseText, 990602317575368724, "Simply load up a Custom Game on Halo 2 Classic Zanzibar, go to the beach and look at the sign next to the water!"))
 			break
 		}
 	}
 	for _, date := range elderSignsDates {
 		if today.Day() == date.Day && today.Month() == date.Month {
-			session.ChannelMessageSend(targetChannelID, fmt.Sprintf(baseText, 990602348659363850, "Simply load up a Custom Game on Halo 3 Valhalla and look at the Sigil on the wall. Remember you need to have looked at 2 different ones for it to unlock!"))
+			session.ChannelMessageSend(generalMccChannelID, fmt.Sprintf(baseText, 990602348659363850, "Simply load up a Custom Game on Halo 3 Valhalla and look at the Sigil on the wall. Remember you need to have looked at 2 different ones for it to unlock!"))
 			break
 		}
 	}

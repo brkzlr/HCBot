@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"regexp"
 	"strings"
 	"time"
 
@@ -13,12 +12,13 @@ import (
 var isTimerActive bool
 
 func messageReactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
-	if m.Emoji.ID != "1117969363627159622" {
-		return
-	}
 	message, err := s.ChannelMessage(m.ChannelID, m.MessageID)
 	if err != nil {
 		log.Println("Error retrieving message for reaction checking!")
+		return
+	}
+
+	if m.Emoji.ID != "1117969363627159622" {
 		return
 	}
 	if message.Author.ID != s.State.User.ID {
@@ -28,8 +28,7 @@ func messageReactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
 		return
 	}
 
-	regex := regexp.MustCompile("<@&(\\d+)>")
-	roleID := regex.FindStringSubmatch(message.Content)[1]
+	roleID := roleRegex.FindStringSubmatch(message.Content)[1]
 
 	err = s.GuildMemberRoleRemove(guildID, m.UserID, roleID)
 	if err != nil {
@@ -110,14 +109,49 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////// Check for wrong reach-mcc messages ///////////////////////////////////
+	//////////////////////////// Check for wrong channel reach messages /////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
-	if m.ChannelID == reachChannelID && !IsStaff(m.Member) {
-		if strings.Contains(msg, "skunked") || (strings.Contains(msg, "negative") && strings.Contains(msg, "ghostrider")) {
-			str := fmt.Sprintf("<@%s> That achievement is a multiplayer achievement. You should use <#984080289242427413> for multiplayer achievements!\n\n***Make sure to check pinned posts in the respective channel beforehand!***.", m.Author.ID)
-			s.ChannelMessageSend(reachChannelID, str)
-			s.ChannelMessageDelete(reachChannelID, m.ID)
+	if (m.ChannelID == reachChannelID || m.ChannelID == generalMccChannelID) && !IsStaff(m.Member) {
+		if strings.Contains(msg, "skunked") || strings.Contains(msg, "invasion") || strings.Contains(msg, "headhunter") || (strings.Contains(msg, "negative") && strings.Contains(msg, "ghostrider")) {
+			str := fmt.Sprintf("<@%s> That achievement is a multiplayer achievement. You should use <#984080289242427413> for multiplayer achievements!\n\n***Make sure to check pinned posts in the respective channel beforehand!***", m.Author.ID)
+			s.ChannelMessageSend(m.ChannelID, str)
+			s.ChannelMessageDelete(m.ChannelID, m.ID)
 			return
 		}
+	}
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////// Check for missing platform in nickname /////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////////
+	if (m.ChannelID != "984080289242427413" && m.ChannelID != "984080200054734849" && m.ChannelID != "984080232904527872" && m.ChannelID != "984080266135994418") && !IsStaff(m.Member) {
+		// Channel IDs in order: MCC Multiplayer, Halo 3 MCC, ODST MCC, MCC China
+
+		var platform string
+		if m.Member.Nick != "" {
+			platform = platformRegex.FindString(strings.ToLower(m.Member.Nick))
+		} else {
+			platform = platformRegex.FindString(strings.ToLower(m.Author.GlobalName))
+		}
+
+		if platform == "" {
+			channel, err := s.Channel(m.ChannelID)
+			if err != nil {
+				log.Printf("Error retrieving channel for MCC platform checking! Error: %s", err)
+			}
+
+			if channel.ParentID == "984080152088698920" { // Master Chief Collection category
+				currentRoles := HasRoles(m.Member, []string{mccRoleID, mccMasterRoleID, modernRoleID, hcRoleID, fcRoleID})
+				for _, hasRole := range currentRoles {
+					if hasRole == true {
+						return
+					}
+				}
+
+				str := fmt.Sprintf("<@%s> You're trying to talk in MCC channels but you're missing a platform tag in your name! MCC does not support cross-platform play except for Halo 3, ODST and Multiplayer modes so you must have [PC], [Xbox] or [PC/Xbox] in your name/nickname.\n\nFor more information, check <#984075961274339368> and <#1046457435277242470>", m.Author.ID)
+				s.ChannelMessageSend(m.ChannelID, str)
+				s.ChannelMessageDelete(m.ChannelID, m.ID)
+			}
+		}
+
 	}
 }

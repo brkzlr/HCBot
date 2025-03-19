@@ -1,6 +1,7 @@
 package main
 
 import (
+	"regexp"
 	"sync"
 	"time"
 
@@ -19,9 +20,10 @@ const (
 	hcRoleID        = "985327939161849857"
 	fcRoleID        = "985328007088590918"
 
-	botChannelID   = "984075793904848916"
-	proofChannelID = "984079675385077820"
-	reachChannelID = "984080246141771806"
+	botChannelID        = "984075793904848916"
+	generalMccChannelID = "984160204440633454"
+	proofChannelID      = "984079675385077820"
+	reachChannelID      = "984080246141771806"
 
 	dropsChannelID = "984078138332028969"
 	dropsRoleID    = "984088663946326018"
@@ -71,6 +73,9 @@ var (
 	appCommands  []*discordgo.ApplicationCommand
 	cooldownMap  = make(map[string]time.Time)
 	cooldownLock sync.Mutex
+
+	platformRegex = regexp.MustCompile("\\[(pc|xbox).*\\]")
+	roleRegex     = regexp.MustCompile("<@&(\\d+)>")
 )
 
 // Timed achievements variables
