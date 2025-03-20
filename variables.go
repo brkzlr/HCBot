@@ -74,7 +74,7 @@ var (
 	cooldownMap  = make(map[string]time.Time)
 	cooldownLock sync.Mutex
 
-	platformRegex = regexp.MustCompile("\\[(pc|xbox).*\\]")
+	platformRegex = regexp.MustCompile("(?:\\(|\\[).*(pc|xbox).*(?:\\)|\\])")
 	roleRegex     = regexp.MustCompile("<@&(\\d+)>")
 )
 
