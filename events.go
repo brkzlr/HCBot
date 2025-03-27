@@ -113,7 +113,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
 	if (m.ChannelID == reachChannelID || m.ChannelID == generalMccChannelID) && !IsStaff(m.Member) {
 		if strings.Contains(msg, "skunked") || strings.Contains(msg, "invasion") || strings.Contains(msg, "headhunter") || (strings.Contains(msg, "negative") && strings.Contains(msg, "ghostrider")) {
-			str := fmt.Sprintf("<@%s> That achievement is a multiplayer achievement. You should use <#984080289242427413> for multiplayer achievements!\n\n***Make sure to check pinned posts in the respective channel beforehand!***", m.Author.ID)
+			str := fmt.Sprintf("<@%s> That achievement is a multiplayer achievement. You should use <#984080289242427413> for multiplayer achievements and not the campaign channels!\n\n***Make sure to check the pinned posts in that channel before posting!***", m.Author.ID)
 			s.ChannelMessageSend(m.ChannelID, str)
 			s.ChannelMessageDelete(m.ChannelID, m.ID)
 			return
@@ -147,7 +147,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					}
 				}
 
-				str := fmt.Sprintf("<@%s> You're trying to talk in MCC channels but you're missing a platform tag in your name! MCC does not support cross-platform play except for Halo 3, ODST and Multiplayer modes so you must have [PC], [Xbox] or [PC/Xbox] in your name/nickname.\n\nFor more information, check <#984075961274339368> and <#1046457435277242470>", m.Author.ID)
+				str := fmt.Sprintf("<@%s> You're trying to talk in MCC channels but you're missing a platform tag in your name!\nMCC does not support cross-platform play except for Halo 3, ODST and Multiplayer modes ***so you must have a platform tag in your display name/server nickname***.\n\nFor more information and examples of platform tags, check <#1046457435277242470> ***which is mandatory reading***.", m.Author.ID)
 				s.ChannelMessageSend(m.ChannelID, str)
 				s.ChannelMessageDelete(m.ChannelID, m.ID)
 			}
