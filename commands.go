@@ -101,12 +101,6 @@ func InitCommands(s *discordgo.Session) error {
 					Description: "The ID of the correct channel where the message should've been posted",
 					Required:    true,
 				},
-				{
-					Type:        discordgo.ApplicationCommandOptionBoolean,
-					Name:        "delete_message",
-					Description: "If true, the message will be deleted",
-					Required:    false,
-				},
 			},
 		},
 		{
@@ -568,7 +562,6 @@ Note: **If you fulfill the requirements for the Modern/Halo Completionist role b
 
 		messageID := ""
 		correctChannelID := ""
-		deleteMessage := false
 
 		for _, option := range i.ApplicationCommandData().Options {
 			if option == nil {
@@ -580,8 +573,6 @@ Note: **If you fulfill the requirements for the Modern/Halo Completionist role b
 				messageID = option.StringValue()
 			case "channel_id":
 				correctChannelID = option.StringValue()
-			case "delete_message":
-				deleteMessage = option.BoolValue()
 			}
 		}
 		RespondACKPing(s, i.Interaction)
@@ -592,11 +583,9 @@ Note: **If you fulfill the requirements for the Modern/Halo Completionist role b
 			return
 		}
 
-		replyStr := fmt.Sprintf("<@%s> The message you posted is not fit for this channel! You should use <#%s> for this type of message.", message.Author.ID, correctChannelID)
+		replyStr := fmt.Sprintf("<@%s> The topic of your message is not fit for this channel!\nIt seems you might've not read <#1046457435277242470> fully, ***which is mandatory reading***.\n\nAs a tip, you should use <#%s> for this topic, but please be more mindful of the channel you're typing in next time.", message.Author.ID, correctChannelID)
 		ReplyToMsg(s, message, replyStr)
-		if deleteMessage {
-			s.ChannelMessageDelete(i.ChannelID, messageID)
-		}
+		s.ChannelMessageDelete(i.ChannelID, messageID)
 		RespondToInteractionEphemeral(s, i.Interaction, "Successfully warned the user!")
 	}
 
