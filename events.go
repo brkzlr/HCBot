@@ -137,6 +137,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			channel, err := s.Channel(m.ChannelID)
 			if err != nil {
 				log.Printf("Error retrieving channel for MCC platform checking! Error: %s", err)
+				return
 			}
 
 			if channel.ParentID == "984080152088698920" { // Master Chief Collection category
