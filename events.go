@@ -62,10 +62,13 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	msg := strings.ToLower(m.Content)
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
-	///////////////////////////////////// Check for discord invites /////////////////////////////////////
+	////////////////////////////////// Check for discord/steam invites //////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
 	if !IsStaff(m.Member) &&
-		(strings.Contains(msg, "discord.gg/") || strings.Contains(msg, "discord.com/invite/")) {
+		(strings.Contains(msg, "discord.gg/") ||
+			strings.Contains(msg, "discord.com/invite/") ||
+			strings.Contains(msg, "discordapp.com/invite/") ||
+			strings.Contains(msg, "steamcommunity.com/gift/")) {
 		s.ChannelMessageDelete(m.ChannelID, m.ID)
 		return
 	}
