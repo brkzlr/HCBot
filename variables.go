@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"regexp"
 	"sync"
 	"time"
@@ -66,9 +67,7 @@ var (
 
 	appCommandsHandlers = make(map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate))
 
-	databaseMap   map[string]string
-	dirtyDatabase bool
-	databaseLock  sync.Mutex
+	database *sql.DB
 
 	appCommands  []*discordgo.ApplicationCommand
 	cooldownMap  = make(map[string]time.Time)

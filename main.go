@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"flag"
 	"io"
@@ -11,6 +13,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func clearCooldowns() {
@@ -27,32 +30,28 @@ func clearCooldowns() {
 	cooldownLock.Unlock()
 }
 
-func saveDatabase() {
-	if !dirtyDatabase {
-		return
-	}
-
-	dbFile, err := os.Open("database.json")
-	if err != nil {
-		log.Println("Error opening database to save! ", err)
-		return
-	}
-	defer dbFile.Close()
-
-	jsonMap, err := json.Marshal(databaseMap)
-	if err != nil {
-		log.Println("Error marshaling database! ", err)
-		return
-	}
-
-	os.WriteFile("database.json", jsonMap, 0644)
-	infoLog.Println("Saved database successfully!")
-	dirtyDatabase = false
-}
-
 var isTest bool
 var guildID string
 var infoLog log.Logger
+
+func initDatabase(dbPath string) error {
+	database, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return err
+	}
+	_, err = database.ExecContext(
+		context.Background(),
+		`CREATE TABLE IF NOT EXISTS users (
+			discordID TEXT PRIMARY KEY,
+			xuid TEXT NOT NULL
+		);`,
+	)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func init() {
 	// Setup logging
@@ -74,15 +73,10 @@ func init() {
 	fileByte, _ := io.ReadAll(jsonFile)
 	json.Unmarshal(fileByte, &tokens)
 
-	// Grab guild users' xuids
-	dbFile, err := os.Open("database.json")
+	err = initDatabase("database.db")
 	if err != nil {
-		log.Fatal("Error opening database.json! Aborting!")
+		log.Fatalf("Error opening/creating database! Error: %s", err)
 	}
-	defer dbFile.Close()
-
-	fileByte, _ = io.ReadAll(dbFile)
-	json.Unmarshal(fileByte, &databaseMap)
 
 	go KeepAliveRequest() // Do a simple request to OpenXBL so token is authenticated
 }
@@ -123,7 +117,6 @@ MainLoop:
 		select {
 		case <-ticker.C:
 			clearCooldowns()
-			saveDatabase()
 			go KeepAliveRequest()
 		case <-achievTicker.C:
 			CheckTimedAchievs(discord)
@@ -133,5 +126,4 @@ MainLoop:
 	}
 
 	discord.ApplicationCommandBulkOverwrite(discord.State.User.ID, guildID, nil) // Delete all application (slash) commands
-	saveDatabase()
 }

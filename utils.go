@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,10 +16,11 @@ import (
 )
 
 func AddGamertagToDB(discordID, xblID string) {
-	databaseLock.Lock()
-	databaseMap[discordID] = xblID
-	databaseLock.Unlock()
-	dirtyDatabase = true
+	database.ExecContext(
+		context.Background(),
+		`INSERT INTO users (discordID, xuid) VALUES (?,?)
+		ON CONFLICT(discordID) DO UPDATE SET xuid=?;`, discordID, xblID, xblID,
+	)
 }
 
 func AddRoleCheckCooldown(discordID string) {
@@ -200,9 +203,17 @@ func GetCompletionSymbol(status GameStatus) string {
 }
 
 func GetGamertagID(discordID string) (xuid string, exists bool) {
-	databaseLock.Lock()
-	xuid, exists = databaseMap[discordID]
-	databaseLock.Unlock()
+	row := database.QueryRowContext(
+		context.Background(),
+		`SELECT xuid FROM users WHERE discordID=?`, discordID,
+	)
+
+	err := row.Scan(&xuid)
+	if err == sql.ErrNoRows {
+		exists = false
+	} else {
+		exists = true
+	}
 	return
 }
 
