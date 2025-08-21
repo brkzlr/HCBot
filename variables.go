@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"regexp"
-	"sync"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -67,11 +66,8 @@ var (
 
 	appCommandsHandlers = make(map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate))
 
-	database *sql.DB
-
-	appCommands  []*discordgo.ApplicationCommand
-	cooldownMap  = make(map[string]time.Time)
-	cooldownLock sync.Mutex
+	appCommands []*discordgo.ApplicationCommand
+	database    *sql.DB
 
 	platformRegex = regexp.MustCompile("(?:\\(|\\[).*(pc|xbox).*(?:\\)|\\])")
 	roleRegex     = regexp.MustCompile("<@&(\\d+)>")

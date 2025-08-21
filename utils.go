@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -16,17 +15,18 @@ import (
 )
 
 func AddGamertagToDB(discordID, xblID string) {
-	database.ExecContext(
-		context.Background(),
+	database.Exec(
 		`INSERT INTO users (discordID, xuid) VALUES (?,?)
 		ON CONFLICT(discordID) DO UPDATE SET xuid=?;`, discordID, xblID, xblID,
 	)
 }
 
 func AddRoleCheckCooldown(discordID string) {
-	cooldownLock.Lock()
-	cooldownMap[discordID] = time.Now().Add(time.Hour * 1)
-	cooldownLock.Unlock()
+	unixTimeCD := time.Now().Add(time.Hour * 1).Unix()
+	database.Exec(
+		`INSERT INTO moderation (discordID, command_cooldown) VALUES (?,?)
+		ON CONFLICT(discordID) DO UPDATE SET command_cooldown=?;`, discordID, unixTimeCD, unixTimeCD,
+	)
 }
 
 func AppendRoleName(rolesString *string, roleName string) {
@@ -41,13 +41,18 @@ func AppendRoleName(rolesString *string, roleName string) {
 }
 
 func CheckCooldown(discordID string) (bool, time.Duration) {
-	cooldownLock.Lock()
-	expirationTime, exists := cooldownMap[discordID]
-	cooldownLock.Unlock()
-	if exists {
+	row := database.QueryRow(
+		`SELECT command_cooldown FROM moderation WHERE discordID=?`, discordID,
+	)
+
+	var rowValue int64
+	err := row.Scan(&rowValue)
+	if err == sql.ErrNoRows {
+		return false, 0
+	} else {
+		expirationTime := time.Unix(rowValue, 0)
 		return expirationTime.After(time.Now()), expirationTime.Sub(time.Now())
 	}
-	return false, 0
 }
 
 // This function will query Spartan Assault & Spartan Strike legacy platform achievements
@@ -203,8 +208,7 @@ func GetCompletionSymbol(status GameStatus) string {
 }
 
 func GetGamertagID(discordID string) (xuid string, exists bool) {
-	row := database.QueryRowContext(
-		context.Background(),
+	row := database.QueryRow(
 		`SELECT xuid FROM users WHERE discordID=?`, discordID,
 	)
 

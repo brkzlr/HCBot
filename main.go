@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"flag"
@@ -16,40 +15,37 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func clearCooldowns() {
-	var idsToRemove []string
-	cooldownLock.Lock()
-	for discordID, expirationTime := range cooldownMap {
-		if expirationTime.Before(time.Now()) {
-			idsToRemove = append(idsToRemove, discordID)
-		}
-	}
-	for _, ids := range idsToRemove {
-		delete(cooldownMap, ids)
-	}
-	cooldownLock.Unlock()
-}
-
 var isTest bool
 var guildID string
 var infoLog log.Logger
 
 func initDatabase(dbPath string) error {
-	database, err := sql.Open("sqlite3", dbPath)
+	var err error
+	database, err = sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return err
 	}
-	_, err = database.ExecContext(
-		context.Background(),
+
+	_, err = database.Exec(
 		`CREATE TABLE IF NOT EXISTS users (
 			discordID TEXT PRIMARY KEY,
 			xuid TEXT NOT NULL
 		);`,
 	)
-
 	if err != nil {
 		return err
 	}
+
+	_, err = database.Exec(
+		`CREATE TABLE IF NOT EXISTS moderation (
+			discordID TEXT PRIMARY KEY,
+			command_cooldown INTEGER
+		);`,
+	)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -116,7 +112,6 @@ MainLoop:
 	for {
 		select {
 		case <-ticker.C:
-			clearCooldowns()
 			go KeepAliveRequest()
 		case <-achievTicker.C:
 			CheckTimedAchievs(discord)
