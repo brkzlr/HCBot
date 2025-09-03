@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -219,6 +220,16 @@ func GetGamertagID(discordID string) (xuid string, exists bool) {
 		exists = true
 	}
 	return
+}
+
+func HasAnySpecifiedRoles(member *discordgo.Member, rolesID []string) bool {
+	for _, id := range member.Roles {
+		if slices.Contains(rolesID, id) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func HasRole(member *discordgo.Member, roleID string) bool {

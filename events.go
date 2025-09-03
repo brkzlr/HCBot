@@ -58,17 +58,19 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		// Ignore messages not coming from a guild
 		return
 	}
+	if IsStaff(m.Member) {
+		return
+	}
 
 	msg := strings.ToLower(m.Content)
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////// Check for discord/steam invites //////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
-	if !IsStaff(m.Member) &&
-		(strings.Contains(msg, "discord.gg/") ||
-			strings.Contains(msg, "discord.com/invite/") ||
-			strings.Contains(msg, "discordapp.com/invite/") ||
-			strings.Contains(msg, "steamcommunity.com/gift/")) {
+	if strings.Contains(msg, "discord.gg/") ||
+		strings.Contains(msg, "discord.com/invite/") ||
+		strings.Contains(msg, "discordapp.com/invite/") ||
+		strings.Contains(msg, "steamcommunity.com/gift/") {
 		s.ChannelMessageDelete(m.ChannelID, m.ID)
 		return
 	}
@@ -76,7 +78,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
 	///////////////////////// Check for proof-of-completion channel misuse //////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
-	if m.ChannelID == proofChannelID && !IsStaff(m.Member) && !strings.Contains(msg, "manual check: modern") && !strings.Contains(msg, "manual check: halo") {
+	if m.ChannelID == proofChannelID && !strings.Contains(msg, "manual check: modern") && !strings.Contains(msg, "manual check: halo") {
 		if (strings.Contains(msg, "mcc") && !strings.Contains(msg, "master")) ||
 			strings.Contains(msg, "chief collection") ||
 			strings.Contains(msg, "china") || strings.Contains(msg, "cn") ||
@@ -111,23 +113,33 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 	}
 
+	channel, err := s.Channel(m.ChannelID)
+	if err != nil {
+		log.Printf("Error retrieving channel for message checking! Error: %s", err)
+		return
+	}
+
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
-	//////////////////////////// Check for wrong channel reach messages /////////////////////////////////
+	////////////////////////////// Check for wrong channel mp messages //////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
-	if (m.ChannelID == reachChannelID || m.ChannelID == generalMccChannelID) && !IsStaff(m.Member) {
-		if strings.Contains(msg, "skunked") || strings.Contains(msg, "invasion") || strings.Contains(msg, "headhunter") || (strings.Contains(msg, "negative") && strings.Contains(msg, "ghostrider")) {
-			str := fmt.Sprintf("<@%s> That achievement is a multiplayer achievement. You should use <#984080289242427413> for multiplayer achievements and not the campaign channels!\n\n***Make sure to check the pinned posts in that channel before posting!***", m.Author.ID)
+	if (channel.ParentID == mccCategoryID && m.ChannelID != multiplayerMccChannelID) || m.ChannelID == "984075728704405515" {
+		if multiplayerAchievRegex.MatchString(msg) {
+			str := fmt.Sprintf("<@%s> That achievement is an MCC multiplayer achievement. You should use <#984080289242427413> for MCC multiplayer achievements and not any of the other channels!\n\n***Make sure to check the pinned messages in that channel before posting!***", m.Author.ID)
 			s.ChannelMessageSend(m.ChannelID, str)
 			s.ChannelMessageDelete(m.ChannelID, m.ID)
 			return
+		} else if multiplayerSoloAchievRegex.MatchString(msg) {
+			str := fmt.Sprintf("<@%s> That achievement is an MCC multiplayer achievement that can be done solo. Look up guides on TrueAchievements for more info.\nIf you still need help, you should use <#984080289242427413> for MCC multiplayer achievements and not any of the other channels!\n\n***Make sure to check the pinned messages in that channel before posting!***", m.Author.ID)
+			s.ChannelMessageSend(m.ChannelID, str)
+			s.ChannelMessageDelete(m.ChannelID, m.ID)
 		}
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////// Check for missing platform in nickname /////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
-	if (m.ChannelID != "984080289242427413" && m.ChannelID != "984080200054734849" && m.ChannelID != "984080232904527872" && m.ChannelID != "984080266135994418") && !IsStaff(m.Member) {
-		// Channel IDs in order: MCC Multiplayer, Halo 3 MCC, ODST MCC, MCC China
+	if channel.ParentID == mccCategoryID && m.ChannelID != multiplayerMccChannelID && m.ChannelID != "984080200054734849" && m.ChannelID != "984080232904527872" && m.ChannelID != "984080266135994418" {
+		// Must be under MCC category and not in the following Channel IDs in order: MCC Multiplayer, Halo 3 MCC, ODST MCC, MCC China.
 
 		var platform string
 		if m.Member.Nick != "" {
@@ -137,25 +149,13 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 
 		if platform == "" {
-			channel, err := s.Channel(m.ChannelID)
-			if err != nil {
-				log.Printf("Error retrieving channel for MCC platform checking! Error: %s", err)
+			if HasAnySpecifiedRoles(m.Member, []string{mccRoleID, mccMasterRoleID, modernRoleID, hcRoleID, fcRoleID}) {
 				return
 			}
 
-			if channel.ParentID == "984080152088698920" { // Master Chief Collection category
-				currentRoles := HasRoles(m.Member, []string{mccRoleID, mccMasterRoleID, modernRoleID, hcRoleID, fcRoleID})
-				for _, hasRole := range currentRoles {
-					if hasRole == true {
-						return
-					}
-				}
-
-				str := fmt.Sprintf("<@%s> You're trying to talk in MCC channels but you're missing a platform tag in your name!\nMCC does not support cross-platform play except for Halo 3, ODST and Multiplayer modes ***so you must have a platform tag in your display name/server nickname***.\n\nFor more information and examples of platform tags, check <#1046457435277242470> ***which is mandatory reading***.", m.Author.ID)
-				s.ChannelMessageSend(m.ChannelID, str)
-				s.ChannelMessageDelete(m.ChannelID, m.ID)
-			}
+			str := fmt.Sprintf("<@%s> You're trying to talk in MCC channels but you're missing a platform tag in your name!\nMCC does not support cross-platform play except for Halo 3, ODST and Multiplayer modes ***so you must have a platform tag in your display name/server nickname for the rest of channels***.\n\nFor more information on how-to and examples of platform tags, check <#1046457435277242470> ***which is mandatory reading***!", m.Author.ID)
+			s.ChannelMessageSend(m.ChannelID, str)
+			s.ChannelMessageDelete(m.ChannelID, m.ID)
 		}
-
 	}
 }

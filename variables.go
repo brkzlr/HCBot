@@ -20,10 +20,12 @@ const (
 	hcRoleID        = "985327939161849857"
 	fcRoleID        = "985328007088590918"
 
-	botChannelID        = "984075793904848916"
-	generalMccChannelID = "984160204440633454"
-	proofChannelID      = "984079675385077820"
-	reachChannelID      = "984080246141771806"
+	botChannelID            = "984075793904848916"
+	generalMccChannelID     = "984160204440633454"
+	mccCategoryID           = "984080152088698920"
+	proofChannelID          = "984079675385077820"
+	reachChannelID          = "984080246141771806"
+	multiplayerMccChannelID = "984080289242427413"
 
 	dropsChannelID = "984078138332028969"
 	dropsRoleID    = "984088663946326018"
@@ -69,8 +71,10 @@ var (
 	appCommands []*discordgo.ApplicationCommand
 	database    *sql.DB
 
-	platformRegex = regexp.MustCompile("(?:\\(|\\[).*(pc|xbox).*(?:\\)|\\])")
-	roleRegex     = regexp.MustCompile("<@&(\\d+)>")
+	multiplayerAchievRegex     = regexp.MustCompile("skunked|invasion|headhunter|(negative.*ghostrider)|grand theft halo|double down|blown out.*sky|decorated warrior|ninja redux|flaming ninja anniversary|legend slayer|invaders repelled|put up your dukes|red vs\\.? blue|shield(s)? up|shook the hornet('s|s)? nest|skeet shooter|goose is loose|top gungoose|bombing run|cold as ice|cold fusion|counter(-|\\s)?snipe|triple threat|wetwork|roadkill rampage|rock and coil|splatter|environmentalist|requiescat|easy to overlook")
+	multiplayerSoloAchievRegex = regexp.MustCompile("tour of duty|eminent domain|gate your thirst|high altitude thirst|rule your thirst|thirst locked down|bloody thirsty|worship your thirst|blastacular|power play|stayin(g|')? alive")
+	platformRegex              = regexp.MustCompile("(?:\\(|\\[).*(pc|xbox).*(?:\\)|\\])")
+	roleRegex                  = regexp.MustCompile("<@&(\\d+)>")
 )
 
 // Timed achievements variables
