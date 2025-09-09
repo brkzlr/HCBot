@@ -21,10 +21,10 @@ const (
 	fcRoleID        = "985328007088590918"
 
 	botChannelID            = "984075793904848916"
+	chinaMccChannelID       = "984080266135994418"
 	generalMccChannelID     = "984160204440633454"
 	mccCategoryID           = "984080152088698920"
 	proofChannelID          = "984079675385077820"
-	reachChannelID          = "984080246141771806"
 	multiplayerMccChannelID = "984080289242427413"
 
 	dropsChannelID = "984078138332028969"

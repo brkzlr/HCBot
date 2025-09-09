@@ -122,7 +122,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////// Check for wrong channel mp messages //////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
-	if (channel.ParentID == mccCategoryID && m.ChannelID != multiplayerMccChannelID) || m.ChannelID == "984075728704405515" {
+	if (channel.ParentID == mccCategoryID && m.ChannelID != multiplayerMccChannelID && m.ChannelID != chinaMccChannelID) || m.ChannelID == "984075728704405515" {
 		if multiplayerAchievRegex.MatchString(msg) {
 			str := fmt.Sprintf("<@%s> That achievement is an MCC multiplayer achievement. You should use <#984080289242427413> for MCC multiplayer achievements and not any of the other channels!\n\n***Make sure to check the pinned messages in that channel before posting!***", m.Author.ID)
 			s.ChannelMessageSend(m.ChannelID, str)
@@ -138,7 +138,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////// Check for missing platform in nickname /////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
-	if channel.ParentID == mccCategoryID && m.ChannelID != multiplayerMccChannelID && m.ChannelID != "984080200054734849" && m.ChannelID != "984080232904527872" && m.ChannelID != "984080266135994418" {
+	if channel.ParentID == mccCategoryID && m.ChannelID != multiplayerMccChannelID && m.ChannelID != "984080200054734849" && m.ChannelID != "984080232904527872" && m.ChannelID != chinaMccChannelID {
 		// Must be under MCC category and not in the following Channel IDs in order: MCC Multiplayer, Halo 3 MCC, ODST MCC, MCC China.
 
 		var platform string
