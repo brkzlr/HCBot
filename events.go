@@ -17,7 +17,6 @@ func messageReactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
 		log.Println("Error retrieving message for reaction checking!")
 		return
 	}
-
 	if m.Emoji.ID != "1117969363627159622" {
 		return
 	}
@@ -141,21 +140,31 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if channel.ParentID == mccCategoryID && m.ChannelID != multiplayerMccChannelID && m.ChannelID != "984080200054734849" && m.ChannelID != "984080232904527872" && m.ChannelID != chinaMccChannelID {
 		// Must be under MCC category and not in the following Channel IDs in order: MCC Multiplayer, Halo 3 MCC, ODST MCC, MCC China.
 
-		var platform string
+		var name string
 		if m.Member.Nick != "" {
-			platform = platformRegex.FindString(strings.ToLower(m.Member.Nick))
+			name = m.Member.Nick
 		} else {
-			platform = platformRegex.FindString(strings.ToLower(m.Author.GlobalName))
+			name = m.Author.GlobalName
 		}
 
-		if platform == "" {
+		if !platformRegex.MatchString(strings.ToLower(name)) {
 			if HasAnySpecifiedRoles(m.Member, []string{mccRoleID, mccMasterRoleID, modernRoleID, hcRoleID, fcRoleID}) {
 				return
 			}
 
-			str := fmt.Sprintf("<@%s> You're trying to talk in MCC channels but you're missing a platform tag in your name!\nMCC does not support cross-platform play except for Halo 3, ODST and Multiplayer modes ***so you must have a platform tag in your display name/server nickname for the rest of channels***.\n\nFor more information on how-to and examples of platform tags, check <#1046457435277242470> ***which is mandatory reading***!", m.Author.ID)
-			s.ChannelMessageSend(m.ChannelID, str)
-			s.ChannelMessageDelete(m.ChannelID, m.ID)
+			hasPCRole := HasRole(m.Member, coopPCRole)
+			hasXboxRole := HasRole(m.Member, coopXboxRole)
+			if hasPCRole && hasXboxRole {
+				s.GuildMemberNickname(hcGuildID, m.Author.ID, fmt.Sprintf("%s [PC/Xbox]", name))
+			} else if hasPCRole {
+				s.GuildMemberNickname(hcGuildID, m.Author.ID, fmt.Sprintf("%s [PC]", name))
+			} else if hasXboxRole {
+				s.GuildMemberNickname(hcGuildID, m.Author.ID, fmt.Sprintf("%s [Xbox]", name))
+			} else {
+				str := fmt.Sprintf("<@%s> You're trying to talk in non-cross-platform MCC channels but you're missing a platform tag in your name!\nYou have no co-op PC/Xbox role assigned so automatic platform tagging failed.\n\nFor more information on how to manually set and examples of platform tags, please check <#1046457435277242470> ***which is mandatory reading***!", m.Author.ID)
+				s.ChannelMessageSend(m.ChannelID, str)
+				s.ChannelMessageDelete(m.ChannelID, m.ID)
+			}
 		}
 	}
 }

@@ -20,6 +20,9 @@ const (
 	hcRoleID        = "985327939161849857"
 	fcRoleID        = "985328007088590918"
 
+	coopPCRole   = "984090494067949620"
+	coopXboxRole = "984090416150364180"
+
 	botChannelID            = "984075793904848916"
 	chinaMccChannelID       = "984080266135994418"
 	generalMccChannelID     = "984160204440633454"

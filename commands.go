@@ -108,6 +108,11 @@ func InitCommands(s *discordgo.Session) error {
 			DefaultMemberPermissions: GetAsPtr[int64](discordgo.PermissionManageGuildExpressions),
 			Type:                     discordgo.MessageApplicationCommand,
 		},
+		{
+			Name:                     "kickuser",
+			DefaultMemberPermissions: GetAsPtr[int64](discordgo.PermissionManageGuildExpressions),
+			Type:                     discordgo.MessageApplicationCommand,
+		},
 	}
 	if _, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, guildID, appCommands); err != nil {
 		return err
@@ -600,6 +605,17 @@ Note: **If you fulfill the requirements for the Modern/Halo Completionist role b
 
 		s.MessageReactionsRemoveAll(message.ChannelID, message.ID)
 		RespondToInteractionEphemeral(s, i.Interaction, "Successfully removed all reactions from the message!")
+	}
+
+	appCommandsHandlers["kickuser"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		LogCommand("kickuser", i.Member.User.Username)
+
+		message := i.ApplicationCommandData().Resolved.Messages[i.ApplicationCommandData().TargetID]
+		if message == nil {
+			return
+		}
+		s.GuildMemberDelete(i.GuildID, message.Author.ID)
+		RespondToInteractionEphemeral(s, i.Interaction, "Kicked user successfully!")
 	}
 
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
