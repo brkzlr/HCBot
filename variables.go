@@ -74,8 +74,8 @@ var (
 	appCommands []*discordgo.ApplicationCommand
 	database    *sql.DB
 
-	multiplayerAchievRegex     = regexp.MustCompile("skunked|invasion|headhunter|(negative.*ghostrider)|skull(a)?manjaro|grand theft halo|double down|blown out.*sky|decorated warrior|ninja redux|flaming ninja anniversary|legend slayer|invaders repelled|put up your dukes|red vs\\.? blue|shield(s)? up|shook the hornet('s|s)? nest|skeet shooter|goose is loose|top gungoose|bombing run|cold as ice|cold fusion|counter(-|\\s)?snipe|triple threat|wetwork|roadkill rampage|rock and coil|splatter|environmentalist|requiescat|easy to overlook")
-	multiplayerSoloAchievRegex = regexp.MustCompile("tour of duty|eminent domain|gate your thirst|high altitude thirst|rule your thirst|thirst locked down|bloody thirsty|worship your thirst|blastacular|power play|stayin(g|')? alive")
+	multiplayerAchievRegex     = regexp.MustCompile("skunked|invasion|headhunter|(negative.*ghostrider)|skull(a)?manjaro|grand theft halo|double down|blown out.*sky|decorated warrior|ninja redux|flaming ninja anniversary|legend slayer|invaders repelled|put up your dukes|red vs\\.? blue|shield(s)? up|shook the hornet('s|s)? nest|skeet shooter|goose is loose|top gungoose|bombing run|cold as ice|cold fusion|counter(-|\\s)?snipe|triple threat|wetwork|roadkill rampage|rock and coil|splatter|environmentalist|requiescat|easy to overlook|back in the day")
+	multiplayerSoloAchievRegex = regexp.MustCompile("tour of duty|eminent domain|gate your thirst|high altitude thirst|rule your thirst|thirst locked down|bloody thirsty|worship your thirst|blastacular|power play|stayin(g|')? alive|sightseeing|checking out your options")
 	platformRegex              = regexp.MustCompile("(?:\\(|\\[).*(pc|xbox).*(?:\\)|\\])")
 	roleRegex                  = regexp.MustCompile("<@&(\\d+)>")
 )
