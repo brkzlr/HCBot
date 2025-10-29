@@ -131,8 +131,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		var name string
 		if m.Member.Nick != "" {
 			name = m.Member.Nick
-		} else {
+		} else if m.Author.GlobalName != "" {
 			name = m.Author.GlobalName
+		} else {
+			name = m.Author.Username
 		}
 
 		if !platformRegex.MatchString(strings.ToLower(name)) {
