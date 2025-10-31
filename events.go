@@ -119,6 +119,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			str := fmt.Sprintf("<@%s> That achievement is an MCC multiplayer achievement that can be done solo. Look up guides on TrueAchievements for more info.\nIf you still need help, you should use <#984080289242427413> for MCC multiplayer achievements and not any of the other channels!\n\n***Make sure to check the pinned messages in that channel before posting!***", m.Author.ID)
 			s.ChannelMessageSend(m.ChannelID, str)
 			s.ChannelMessageDelete(m.ChannelID, m.ID)
+			return
 		}
 	}
 
@@ -154,6 +155,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				str := fmt.Sprintf("<@%s> You're trying to talk in non-cross-platform MCC channels but you're missing a platform tag in your name!\nYou have no co-op PC/Xbox role assigned so automatic platform tagging failed.\n\nFor more information on how to manually set and examples of platform tags, please check <#1046457435277242470> ***which is mandatory reading***!", m.Author.ID)
 				s.ChannelMessageSend(m.ChannelID, str)
 				s.ChannelMessageDelete(m.ChannelID, m.ID)
+				return
 			}
 		}
 	}
