@@ -100,12 +100,16 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 	}
 
+	// We don't want to do mp messages or platform roles check on people who already 100%'d MCC
+	if HasAnySpecifiedRoles(m.Member, []string{mccRoleID, mccMasterRoleID, modernRoleID, hcRoleID, fcRoleID}) {
+		return
+	}
+
 	channel, err := s.Channel(m.ChannelID)
 	if err != nil {
 		log.Printf("Error retrieving channel for message checking! Error: %s", err)
 		return
 	}
-
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////// Check for wrong channel mp messages //////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -139,10 +143,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 
 		if !platformRegex.MatchString(strings.ToLower(name)) {
-			if HasAnySpecifiedRoles(m.Member, []string{mccRoleID, mccMasterRoleID, modernRoleID, hcRoleID, fcRoleID}) {
-				return
-			}
-
 			hasPCRole := HasRole(m.Member, coopPCRole)
 			hasXboxRole := HasRole(m.Member, coopXboxRole)
 			if hasPCRole && hasXboxRole {
