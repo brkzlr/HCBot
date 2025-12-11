@@ -101,7 +101,7 @@ func main() {
 	infoLog.Println("Commands initialised!")
 
 	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM)
 
 	ticker := time.NewTicker(1 * time.Hour)
 	achievTicker := time.NewTicker(1 * time.Minute)

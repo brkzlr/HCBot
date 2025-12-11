@@ -132,11 +132,12 @@ func CheckLegacyAssaultStrikeAchievements(discordID string) (map[string]GameStat
 			achievCountToCheck = StrikeAchievCount
 		}
 
-		if playerAchievsInfo.PagingInfo.TotalRecords == achievCountToCheck {
+		switch playerAchievsInfo.PagingInfo.TotalRecords {
+		case achievCountToCheck:
 			gamesToCheck[titleID] = COMPLETED
-		} else if playerAchievsInfo.PagingInfo.TotalRecords == 0 {
+		case 0:
 			gamesToCheck[titleID] = NOT_FOUND
-		} else {
+		default:
 			gamesToCheck[titleID] = NOT_COMPLETED
 		}
 	}
@@ -233,13 +234,7 @@ func HasAnySpecifiedRoles(member *discordgo.Member, rolesID []string) bool {
 }
 
 func HasRole(member *discordgo.Member, roleID string) bool {
-	for _, id := range member.Roles {
-		if id == roleID {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(member.Roles, roleID)
 }
 
 func HasRoles(member *discordgo.Member, rolesID []string) map[string]bool {
