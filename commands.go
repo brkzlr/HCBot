@@ -394,7 +394,7 @@ func InitCommands(s *discordgo.Session) error {
 			}
 		}
 
-		if eligibleRoles == "" {
+		if !isTest && !IsStaff(i.Member) && eligibleRoles == "" {
 			warnMsg := "You're not eligible for any new role! **Please only use this command once you fulfill the requirements for a new role**. You can check role requirements in <#984078260671483945>."
 			RespondFollowUpToInteraction(s, i.Interaction, warnMsg)
 		} else {
