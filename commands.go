@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -111,21 +112,11 @@ func InitCommands(s *discordgo.Session) error {
 	// Create the handler for each slash command
 	appCommandsHandlers["count"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		LogCommand("count", i.Member.User.Username)
-		rolesToCheck := []string{mccRoleID, mccChinaRoleID, infiniteRoleID, modernRoleID, legacyRoleID, lasochistRoleID, mccMasterRoleID, hcRoleID, fcRoleID}
 
-		rolesCount := make(map[string]int)
-		for _, roleID := range rolesToCheck {
-			rolesCount[roleID] = 0
-		}
-
-		guildMembers := GetAllGuildMembers(s, i.GuildID)
-		for _, member := range guildMembers {
-			rolesMap := HasRoles(member, rolesToCheck)
-			for roleID, hasRole := range rolesMap {
-				if hasRole {
-					rolesCount[roleID]++
-				}
-			}
+		rolesCount, err := s.GuildRoleMemberCounts(guildID)
+		if err != nil {
+			log.Printf("Error grabbing member role counts! Err: %s", err)
+			return
 		}
 
 		resultStr := "Number of users with each role:\n" +
