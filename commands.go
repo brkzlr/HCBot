@@ -16,7 +16,7 @@ func InitCommands(s *discordgo.Session) error {
 		},
 		{
 			Name:        "gamertag",
-			Description: "Set your gamertag for the /rolecheck command",
+			Description: "Set your gamertag in the database for the /rolecheck command",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
@@ -31,69 +31,14 @@ func InitCommands(s *discordgo.Session) error {
 			Description: "Check and receive roles according to your Halo games achievements",
 		},
 		{
-			Name:                     "bulkdelete",
-			Description:              "Mass delete messages from the current channel using filtering options",
-			DefaultMemberPermissions: GetAsPtr[int64](discordgo.PermissionManageGuildExpressions),
-			Options: []*discordgo.ApplicationCommandOption{
-				{
-					Type:        discordgo.ApplicationCommandOptionInteger,
-					Name:        "limit",
-					Description: "Amount of messages to filter through (default 50)",
-					MinValue:    GetAsPtr(0.0),
-					MaxValue:    100,
-				},
-				{
-					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "user_id",
-					Description: "If provided, only delete messages for this user",
-				},
-				{
-					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "before_message_id",
-					Description: "If provided, all messages deleted will be before given message ID",
-				},
-				{
-					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "after_message_id",
-					Description: "If provided, all messages deleted will be after given message ID",
-				},
-			},
-		},
-		{
-			Name:                     "muteinchannel",
-			Description:              "Remove a user's ability from talking in the current channel",
-			DefaultMemberPermissions: GetAsPtr[int64](discordgo.PermissionManageGuildExpressions),
-			Options: []*discordgo.ApplicationCommandOption{
-				{
-					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "user_id",
-					Description: "The user ID that will lose the ability to send messages in this channel",
-					Required:    true,
-				},
-			},
-		},
-		{
-			Name:                     "unmuteinchannel",
-			Description:              "Restore a user's ability from talking in the current channel",
-			DefaultMemberPermissions: GetAsPtr[int64](discordgo.PermissionManageGuildExpressions),
-			Options: []*discordgo.ApplicationCommandOption{
-				{
-					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "user_id",
-					Description: "The user ID that will regain the ability to send messages in this channel",
-					Required:    true,
-				},
-			},
-		},
-		{
 			Name:                     "warnwrongchannel",
 			Description:              "Warn a user for posting in the wrong channel",
-			DefaultMemberPermissions: GetAsPtr[int64](discordgo.PermissionManageGuildExpressions),
+			DefaultMemberPermissions: GetAsPtr[int64](discordgo.PermissionModerateMembers),
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "message_id",
-					Description: "The message that should be warned",
+					Description: "The ID of the message that will be deleted",
 					Required:    true,
 				},
 				{
@@ -457,90 +402,6 @@ Note: **If you fulfill the requirements for the Modern/Halo Completionist role b
 			)
 			RespondFollowUpToInteraction(s, i.Interaction, progressMsg)
 		}
-	}
-
-	appCommandsHandlers["bulkdelete"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		LogCommand("bulkdelete", i.Member.User.Username)
-
-		limit := 0
-		userID := ""
-		beforeID := ""
-		afterID := ""
-
-		for _, option := range i.ApplicationCommandData().Options {
-			if option == nil {
-				continue
-			}
-
-			switch option.Name {
-			case "limit":
-				limit = int(option.IntValue())
-			case "user_id":
-				userID = option.StringValue()
-			case "before_message_id":
-				beforeID = option.StringValue()
-			case "after_message_id":
-				afterID = option.StringValue()
-			}
-		}
-		RespondACKPing(s, i.Interaction)
-
-		messages, err := s.ChannelMessages(i.ChannelID, limit, beforeID, afterID, "")
-		if err != nil {
-			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("Error while grabbing channel messages! (Error: %s)", err))
-			return
-		}
-
-		if limit == 0 {
-			// Discord returns 50 messages by default if limit is not supplied.
-			limit = 50
-		}
-
-		messagesToDelete := make([]string, 0, limit)
-		for _, message := range messages {
-			if message == nil {
-				continue
-			}
-			if userID != "" && userID != message.Author.ID {
-				continue
-			}
-			messagesToDelete = append(messagesToDelete, message.ID)
-		}
-
-		err = s.ChannelMessagesBulkDelete(i.ChannelID, messagesToDelete)
-		if err != nil {
-			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("Error while deleting channel messages! (Error: %s)", err))
-			return
-		}
-		RespondToInteractionEphemeral(s, i.Interaction, "Successfully deleted messages!")
-	}
-
-	appCommandsHandlers["muteinchannel"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		LogCommand("muteinchannel", i.Member.User.Username)
-
-		userID := i.ApplicationCommandData().Options[0].StringValue()
-		RespondACKPing(s, i.Interaction)
-
-		err := s.ChannelPermissionSet(i.ChannelID, userID, discordgo.PermissionOverwriteTypeMember, 0, discordgo.PermissionSendMessages)
-		if err != nil {
-			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("Error while changing channel permission overwrite! (Error: %s)", err))
-			return
-		}
-		RespondToInteractionEphemeral(s, i.Interaction, "Successfully removed user's ability to message in this channel!")
-	}
-
-	appCommandsHandlers["unmuteinchannel"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		LogCommand("unmuteinchannel", i.Member.User.Username)
-
-		userID := i.ApplicationCommandData().Options[0].StringValue()
-		RespondACKPing(s, i.Interaction)
-
-		err := s.ChannelPermissionDelete(i.ChannelID, userID)
-		if err != nil {
-			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("Error while deleting channel permission overwrite! (Error: %s)", err))
-			return
-		}
-		RespondToInteractionEphemeral(s, i.Interaction, "Successfully restored user's ability to message in this channel!")
 	}
 
 	appCommandsHandlers["warnwrongchannel"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {

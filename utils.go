@@ -98,19 +98,19 @@ func CheckLegacyAssaultStrikeAchievements(discordID string) (map[string]GameStat
 		client := &http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
-			return nil, errors.New("Whoops! Server responded with an error! Apologies, please try again!")
+			return nil, errors.New("Whoops! Server responded with an error! Apologies, please try again later.")
 		}
 		defer resp.Body.Close()
 
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, errors.New("Whoops! Server responded with an error! Apologies, please try again!")
+			return nil, errors.New("Whoops! Server responded with an error! Apologies, please try again later.")
 		}
 
 		var playerAchievsInfo AchievListInfo
 		err = json.Unmarshal(body, &playerAchievsInfo)
 		if err != nil {
-			return nil, errors.New("Whoops! Server responded with an error! Apologies, please try again!")
+			return nil, errors.New("Whoops! Server responded with an error! Apologies, please try again later.")
 		}
 
 		achievCountToCheck := 0
@@ -355,14 +355,14 @@ func RequestPlayerAchievements(discordID string) ([]GameStatsResp, error) {
 	err = decoder.Decode(&objMap)
 	if err != nil {
 		log.Println("Error in achievements JSON response: ", err)
-		return nil, errors.New("Server responded with garbage! It's not your fault, please try again!")
+		return nil, errors.New("Server responded with garbage! It's not your fault, please try again later.")
 	}
 
 	var gamesStats []GameStatsResp
 	err = json.Unmarshal(objMap["titles"], &gamesStats)
 	if err != nil {
 		log.Println("Error in achievements JSON unmarshal: ", err)
-		return nil, errors.New("Server responded with garbage! It's not your fault, please try again!")
+		return nil, errors.New("Server responded with garbage! It's not your fault, please try again later.")
 	}
 
 	if len(gamesStats) == 0 {
@@ -399,7 +399,7 @@ func RequestPlayerGT(gamerTag string) (string, error) {
 	err = decoder.Decode(&objMap)
 	if err != nil {
 		log.Println("Error in gamertag JSON response: ", err)
-		return "", errors.New("Server responded with garbage! It's not your fault, please try again!")
+		return "", errors.New("Server responded with garbage! It's not your fault, please try again later.")
 	}
 
 	var respID []GTResp
