@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"slices"
@@ -87,7 +86,7 @@ func CheckLegacyAssaultStrikeAchievements(discordID string) (map[string]GameStat
 	xbID, _ := GetGamertagID(discordID)
 
 	for titleID := range gamesToCheck {
-		url := "https://xbl.io/api/v2/achievements/x360/" + xbID + "/title/" + titleID
+		url := "https://api.xbl.io/v2/achievements/x360/" + xbID + "/title/" + titleID
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			return nil, err
@@ -98,20 +97,19 @@ func CheckLegacyAssaultStrikeAchievements(discordID string) (map[string]GameStat
 		client := &http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
-			return nil, errors.New("Whoops! Server responded with an error! Apologies, please try again later.")
+			log.Println("Error in x360 achievements GET request: ", err)
+			return nil, errors.New("Error trying to contact the server! Please try again later.")
 		}
 		defer resp.Body.Close()
 
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, errors.New("Whoops! Server responded with an error! Apologies, please try again later.")
+		if resp.StatusCode != 200 {
+			log.Println("Received http error status code in x360 achievements GET response, status code: ", resp.StatusCode)
+			return nil, errors.New("OpenXBL responded with an error status code. Please try again later.")
 		}
 
-		var playerAchievsInfo AchievListInfo
-		err = json.Unmarshal(body, &playerAchievsInfo)
-		if err != nil {
-			return nil, errors.New("Whoops! Server responded with an error! Apologies, please try again later.")
-		}
+		var achievsResp X360AchievsResp
+		decoder := json.NewDecoder(resp.Body)
+		decoder.Decode(&achievsResp)
 
 		achievCountToCheck := 0
 		switch titleID {
@@ -132,7 +130,7 @@ func CheckLegacyAssaultStrikeAchievements(discordID string) (map[string]GameStat
 			achievCountToCheck = StrikeAchievCount
 		}
 
-		switch playerAchievsInfo.PagingInfo.TotalRecords {
+		switch achievsResp.Content.PagingInfo.TotalRecords {
 		case achievCountToCheck:
 			gamesToCheck[titleID] = COMPLETED
 		case 0:
@@ -270,7 +268,7 @@ func LogCommand(cmdName, author string) {
 }
 
 func KeepAliveRequest() {
-	req, _ := http.NewRequest("GET", "https://xbl.io/api/v2/account", nil)
+	req, _ := http.NewRequest("GET", "https://api.xbl.io/v2/account", nil)
 	req.Header.Add("X-Authorization", tokens.OpenXBL)
 	req.Header.Add("Accept", "application/json")
 
@@ -327,17 +325,17 @@ func RespondToInteractionEphemeral(s *discordgo.Session, i *discordgo.Interactio
 	})
 }
 
-func RequestPlayerAchievements(discordID string) ([]GameStatsResp, error) {
+func RequestPlayerAchievements(discordID string) (AchievementsResp, error) {
 	xbID, ok := GetGamertagID(discordID)
 	if !ok {
-		return nil, errors.New("Your gamertag is missing from the database! Please set your gamertag first using the `/gamertag` command.")
+		return AchievementsResp{}, errors.New("Your gamertag is missing from the database! Please set your gamertag first using the `/gamertag` command.")
 	}
 
-	url := "https://xbl.io/api/v2/achievements/player/" + xbID
+	url := "https://api.xbl.io/v3/achievements/player/" + xbID
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Println("Error in creating achievements GET request: ", err)
-		return nil, errors.New("Whoops! Sorry, internal error. Please try again!")
+		return AchievementsResp{}, errors.New("Whoops! Sorry, internal error. Please try again.")
 	}
 
 	req.Header.Add("X-Authorization", tokens.OpenXBL)
@@ -346,42 +344,36 @@ func RequestPlayerAchievements(discordID string) ([]GameStatsResp, error) {
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println("Error in achievements GET request: ", err)
-		return nil, errors.New("Error trying to contact the server! Please try again later!")
+		return AchievementsResp{}, errors.New("Error trying to contact the server! Please try again later.")
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != 200 {
+		log.Println("Received http error status code in achievements GET response, status code: ", resp.StatusCode)
+		return AchievementsResp{}, errors.New("OpenXBL responded with an error status code. Please try again later.")
+	}
+
+	var achievsResp AchievementsResp
 	decoder := json.NewDecoder(resp.Body)
-	var objMap map[string]json.RawMessage
-	err = decoder.Decode(&objMap)
-	if err != nil {
-		log.Println("Error in achievements JSON response: ", err)
-		return nil, errors.New("Server responded with garbage! It's not your fault, please try again later.")
+	decoder.Decode(&achievsResp)
+
+	if len(achievsResp.Content.Titles) == 0 {
+		return AchievementsResp{}, errors.New("You have either not played any games or your Xbox profile is private.")
 	}
 
-	var gamesStats []GameStatsResp
-	err = json.Unmarshal(objMap["titles"], &gamesStats)
-	if err != nil {
-		log.Println("Error in achievements JSON unmarshal: ", err)
-		return nil, errors.New("Server responded with garbage! It's not your fault, please try again later.")
-	}
-
-	if len(gamesStats) == 0 {
-		return nil, errors.New("You have either not played any games or your Xbox profile is private.")
-	}
-
-	return gamesStats, nil
+	return achievsResp, nil
 }
 
 func RequestPlayerGT(gamerTag string) (string, error) {
 	// Gamertags with a suffix should not include the hashtag
 	urlTag := strings.ReplaceAll(gamerTag, "#", "")
 	urlTag = strings.ReplaceAll(urlTag, " ", "%20")
-	url := "https://xbl.io/api/v2/friends/search?gt=" + urlTag
+	url := "https://api.xbl.io/v2/friends/search?gt=" + urlTag
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Println("Error in creating gamertag GET request: ", err)
-		return "", errors.New("Whoops! Sorry, internal error. Please try again!")
+		return "", errors.New("Whoops! Sorry, internal error. Please try again.")
 	}
 
 	req.Header.Add("X-Authorization", tokens.OpenXBL)
@@ -390,23 +382,23 @@ func RequestPlayerGT(gamerTag string) (string, error) {
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println("Error in gamertag GET request: ", err)
-		return "", errors.New("Error trying to contact the server! Please try again later!")
+		return "", errors.New("Error trying to contact the server! Please try again later.")
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != 200 {
+		log.Println("Received http error status code in gamertag GET response, status code: ", resp.StatusCode)
+		return "", errors.New("OpenXBL responded with an error status code. Please try again later.")
+	}
+
+	var jsonResp GTResp
 	decoder := json.NewDecoder(resp.Body)
-	var objMap map[string]json.RawMessage
-	err = decoder.Decode(&objMap)
-	if err != nil {
-		log.Println("Error in gamertag JSON response: ", err)
-		return "", errors.New("Server responded with garbage! It's not your fault, please try again later.")
+	decoder.Decode(&jsonResp)
+
+	if jsonResp.StatusCode == 404 {
+		str := fmt.Sprintf("I couldn't find any valid \"**%s**\" gamertag! Please make sure you typed the gamertag correctly.", gamerTag)
+		return "", errors.New(str)
 	}
 
-	var respID []GTResp
-	err = json.Unmarshal(objMap["profileUsers"], &respID)
-	if err != nil {
-		return "", errors.New("Hmm, that gamertag didn't work! Please make sure you typed the gamertag correctly.")
-	}
-
-	return respID[0].ID, nil
+	return jsonResp.Content.ProfileUsers[0].ID, nil
 }

@@ -171,8 +171,8 @@ func InitCommands(s *discordgo.Session) error {
 		}
 		/////////////////////////////////////////////////////////////////////////////////////////
 
-		for _, game := range gamesStats {
-			isDone := (game.Stats.CurrentGScore == game.Stats.TotalGScore) && (game.Stats.TotalGScore != 0)
+		for _, game := range gamesStats.Content.Titles {
+			isDone := (game.Achievement.CurrentGamerscore == game.Achievement.TotalGamerscore) && (game.Achievement.TotalGamerscore != 0)
 			if _, exists := modernCompletionMap[game.TitleID]; exists {
 				if isDone {
 					modernCompletionMap[game.TitleID] = COMPLETED
@@ -188,7 +188,7 @@ func InitCommands(s *discordgo.Session) error {
 			} else if _, exists := miscCompletionMap[game.TitleID]; exists {
 				if game.TitleID == mccChinaTitleID {
 					// MCC CN has 4 unobtainable achievements that are 90G in total
-					isDone = (game.Stats.CurrentGScore == (game.Stats.TotalGScore - 90))
+					isDone = (game.Achievement.CurrentGamerscore == (game.Achievement.TotalGamerscore - 90))
 				}
 				if isDone {
 					miscCompletionMap[game.TitleID] = COMPLETED
