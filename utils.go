@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"slices"
@@ -77,7 +78,7 @@ func CheckLegacyAssaultStrikeAchievements(discordID string) (map[string]GameStat
 	// the total amount of achievements, which would double the number of calls per user to 14 just for SS/SA
 	const (
 		AssaultAchievCount    = 25 // Windows/WP
-		AssaultIOSAchievCount = 20 // 5 unobtainable achievements in iOS
+		AssaultIOSAchievCount = 20 // 5 unobtainable achievements in iOS, though I developed a patch to enable the missing 5, so we'll do an additional check below.
 		Assault360AchievCount = 28
 		StrikeAchievCount     = 20 // Spartan Strike has 20 achievements on all 3 platforms
 	)
@@ -136,7 +137,13 @@ func CheckLegacyAssaultStrikeAchievements(discordID string) (map[string]GameStat
 		case 0:
 			gamesToCheck[titleID] = NOT_FOUND
 		default:
-			gamesToCheck[titleID] = NOT_COMPLETED
+			if titleID == hsaIOSTitleID && achievsResp.Content.PagingInfo.TotalRecords == 25 {
+				// With my iOS SA patcher fix, people can now get all 25 achievements instead of 20.
+				// More info at https://github.com/brkzlr/SASSFix
+				gamesToCheck[titleID] = COMPLETED
+			} else {
+				gamesToCheck[titleID] = NOT_COMPLETED
+			}
 		}
 	}
 
@@ -331,7 +338,7 @@ func RequestPlayerAchievements(discordID string) (AchievementsResp, error) {
 		return AchievementsResp{}, errors.New("Your gamertag is missing from the database! Please set your gamertag first using the `/gamertag` command.")
 	}
 
-	url := "https://api.xbl.io/v3/achievements/player/" + xbID
+	url := "https://api.xbl.io/v2/achievements/player/" + xbID
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Println("Error in creating achievements GET request: ", err)
@@ -398,6 +405,13 @@ func RequestPlayerGT(gamerTag string) (string, error) {
 	if jsonResp.StatusCode == 404 {
 		str := fmt.Sprintf("I couldn't find any valid \"**%s**\" gamertag! Please make sure you typed the gamertag correctly.", gamerTag)
 		return "", errors.New(str)
+	}
+
+	// TODO: Remove after OpenXBL fixes their shit
+	if len(jsonResp.Content.ProfileUsers) == 0 {
+		bytes, _ := io.ReadAll(resp.Body)
+		log.Println("Garbage data received from OpenXBL: ", string(bytes))
+		return "", errors.New("OpenXBL responded with garbage data, notified <@180932541103079424>. Please try again after BrK's confirmation...")
 	}
 
 	return jsonResp.Content.ProfileUsers[0].ID, nil
