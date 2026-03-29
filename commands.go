@@ -216,116 +216,119 @@ func InitCommands(s *discordgo.Session) error {
 		eligibleRoles := ""
 		currentRoles := HasRoles(i.Member, []string{mccRoleID, mccMasterRoleID, mccChinaRoleID, infiniteRoleID, modernRoleID, legacyRoleID, hcRoleID, fcRoleID})
 
-		// Give non-stackable roles first if eligible
-		legacyDone := true
-		for _, gameStatus := range legacyCompletionMap {
-			if gameStatus != COMPLETED {
-				legacyDone = false
-				break
-			}
-		}
-		if legacyDone && !currentRoles[legacyRoleID] {
-			s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, legacyRoleID)
-			AppendRoleName(&eligibleRoles, "**Legacy Completionist**")
-		}
 		if gameStatus := miscCompletionMap[mccChinaTitleID]; gameStatus == COMPLETED && !currentRoles[mccChinaRoleID] {
 			s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, mccChinaRoleID)
 			AppendRoleName(&eligibleRoles, "**MCC CN \"100%\"**")
 		}
 		///////////////////////////////////////////
 
-		// FC/HC holders don't need the checks below
-		if !currentRoles[fcRoleID] && !currentRoles[hcRoleID] {
-			// Check Assault and Strike individually as we only care about one version completion
-			assaultDone := false
-			for _, gameStatus := range assaultCompletionMap {
-				if gameStatus == COMPLETED {
-					assaultDone = true
-					break
-				}
-			}
-			strikeDone := false
-			for _, gameStatus := range strikeCompletionMap {
-				if gameStatus == COMPLETED {
-					strikeDone = true
-					break
-				}
-			}
-
-			// Check role eligibility in the order of priority: HC -> Modern -> Infinite & MCC
-			modernDone := true
-			modernPartiallyDone := true
-			for titleID, gameStatus := range modernCompletionMap {
+		// FC holders don't need the checks below
+		if !currentRoles[fcRoleID] {
+			legacyDone := true
+			for _, gameStatus := range legacyCompletionMap {
 				if gameStatus != COMPLETED {
-					modernDone = false
-
-					// We can still use modern as a base for HC if we're only missing MCC and HWDE
-					if titleID != mccTitleID && titleID != hwdeTitleID {
-						modernPartiallyDone = false
-					}
+					legacyDone = false
+					break
 				}
 			}
-			if modernDone {
-				// Check SS, SA and Forge for HC eligibility
-				if miscCompletionMap[h5ForgeTitleID] == COMPLETED && assaultDone && strikeDone {
-					if !currentRoles[hcRoleID] {
-						// Grant HC
+			if legacyDone && !currentRoles[legacyRoleID] {
+				s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, legacyRoleID)
+				AppendRoleName(&eligibleRoles, "**Legacy Completionist**")
+			}
+
+			// HC holders don't need the checks below
+			if !currentRoles[hcRoleID] {
+				// Check Assault and Strike individually as we only care about one version completion
+				assaultDone := false
+				for _, gameStatus := range assaultCompletionMap {
+					if gameStatus == COMPLETED {
+						assaultDone = true
+						break
+					}
+				}
+				strikeDone := false
+				for _, gameStatus := range strikeCompletionMap {
+					if gameStatus == COMPLETED {
+						strikeDone = true
+						break
+					}
+				}
+
+				// Check role eligibility in the order of priority: HC -> Modern -> Infinite & MCC
+				modernDone := true
+				modernPartiallyDone := true
+				for titleID, gameStatus := range modernCompletionMap {
+					if gameStatus != COMPLETED {
+						modernDone = false
+
+						// We can still use modern as a base for HC if we're only missing MCC and HWDE
+						if titleID != mccTitleID && titleID != hwdeTitleID {
+							modernPartiallyDone = false
+						}
+					}
+				}
+				if modernDone {
+					// Check SS, SA and Forge for HC eligibility
+					if miscCompletionMap[h5ForgeTitleID] == COMPLETED && assaultDone && strikeDone {
+						if !currentRoles[hcRoleID] {
+							// Grant HC
+							s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, mccRoleID)
+							s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, infiniteRoleID)
+							s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, modernRoleID)
+							s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, hcRoleID)
+							AppendRoleName(&eligibleRoles, "**Halo Completionist**")
+						}
+					} else if !currentRoles[modernRoleID] {
+						// Grant Modern
 						s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, mccRoleID)
 						s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, infiniteRoleID)
-						s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, modernRoleID)
-						s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, hcRoleID)
-						AppendRoleName(&eligibleRoles, "**Halo Completionist**")
+						s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, modernRoleID)
+						AppendRoleName(&eligibleRoles, "**Modern Completionist**")
 					}
-				} else if !currentRoles[modernRoleID] {
-					// Grant Modern
-					s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, mccRoleID)
-					s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, infiniteRoleID)
-					s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, modernRoleID)
-					AppendRoleName(&eligibleRoles, "**Modern Completionist**")
-				}
-			} else if modernPartiallyDone && miscCompletionMap[h5ForgeTitleID] == COMPLETED && assaultDone && strikeDone {
-				// We can still grant HC if we replace MCC with classic halos and HWDE with classic HW
-				grantHC := false
-				if legacyDone && miscCompletionMap[h2TitleID] == COMPLETED {
-					grantHC = true
+				} else if modernPartiallyDone && miscCompletionMap[h5ForgeTitleID] == COMPLETED && assaultDone && strikeDone {
+					// We can still grant HC if we replace MCC with classic halos and HWDE with classic HW
+					grantHC := false
+					if legacyDone && miscCompletionMap[h2TitleID] == COMPLETED {
+						grantHC = true
+					} else {
+						// If we don't have all of the alternative games completed, we have to manually check to make sure we're still eligibile for HC
+						if modernCompletionMap[mccTitleID] != COMPLETED && modernCompletionMap[hwdeTitleID] == COMPLETED {
+							grantHC = (legacyCompletionMap[hceaTitleID] == COMPLETED) &&
+								(legacyCompletionMap[h3TitleID] == COMPLETED) &&
+								(legacyCompletionMap[odstTitleID] == COMPLETED) &&
+								(legacyCompletionMap[reachTitleID] == COMPLETED) &&
+								(legacyCompletionMap[h4TitleID] == COMPLETED) &&
+								(miscCompletionMap[h2TitleID] == COMPLETED)
+
+						} else if modernCompletionMap[mccTitleID] == COMPLETED && modernCompletionMap[hwdeTitleID] != COMPLETED {
+							grantHC = (legacyCompletionMap[hwTitleID] == COMPLETED)
+						}
+						// If both are not completed, then we don't have to check anymore as we need all legacy and h2v which is checked in the first if above
+					}
+
+					if grantHC {
+						if !currentRoles[hcRoleID] {
+							s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, mccRoleID)
+							s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, infiniteRoleID)
+							s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, modernRoleID)
+							s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, hcRoleID)
+							AppendRoleName(&eligibleRoles, "**Halo Completionist**")
+						}
+					} else if !currentRoles[infiniteRoleID] {
+						// Grant Infinite as we have it done and couldn't give HC
+						s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, infiniteRoleID)
+						AppendRoleName(&eligibleRoles, "**Infinite 100%**")
+					}
 				} else {
-					// If we don't have all of the alternative games completed, we have to manually check to make sure we're still eligibile for HC
-					if modernCompletionMap[mccTitleID] != COMPLETED && modernCompletionMap[hwdeTitleID] == COMPLETED {
-						grantHC = (legacyCompletionMap[hceaTitleID] == COMPLETED) &&
-							(legacyCompletionMap[h3TitleID] == COMPLETED) &&
-							(legacyCompletionMap[odstTitleID] == COMPLETED) &&
-							(legacyCompletionMap[reachTitleID] == COMPLETED) &&
-							(legacyCompletionMap[h4TitleID] == COMPLETED) &&
-							(miscCompletionMap[h2TitleID] == COMPLETED)
-
-					} else if modernCompletionMap[mccTitleID] == COMPLETED && modernCompletionMap[hwdeTitleID] != COMPLETED {
-						grantHC = (legacyCompletionMap[hwTitleID] == COMPLETED)
+					// Check MCC and Infinite eligibility
+					if modernCompletionMap[mccTitleID] == COMPLETED && !currentRoles[mccRoleID] {
+						s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, mccRoleID)
+						AppendRoleName(&eligibleRoles, "**MCC 100%**")
 					}
-					// If both are not completed, then we don't have to check anymore as we need all legacy and h2v which is checked in the first if above
-				}
-
-				if grantHC {
-					if !currentRoles[hcRoleID] {
-						s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, mccRoleID)
-						s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, infiniteRoleID)
-						s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, modernRoleID)
-						s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, hcRoleID)
-						AppendRoleName(&eligibleRoles, "**Halo Completionist**")
+					if modernCompletionMap[infiniteTitleID] == COMPLETED && !currentRoles[infiniteRoleID] {
+						s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, infiniteRoleID)
+						AppendRoleName(&eligibleRoles, "**Infinite 100%**")
 					}
-				} else if !currentRoles[infiniteRoleID] {
-					// Grant Infinite as we have it done and couldn't give HC
-					s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, infiniteRoleID)
-					AppendRoleName(&eligibleRoles, "**Infinite 100%**")
-				}
-			} else {
-				// Check MCC and Infinite eligibility
-				if modernCompletionMap[mccTitleID] == COMPLETED && !currentRoles[mccRoleID] {
-					s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, mccRoleID)
-					AppendRoleName(&eligibleRoles, "**MCC 100%**")
-				}
-				if modernCompletionMap[infiniteTitleID] == COMPLETED && !currentRoles[infiniteRoleID] {
-					s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, infiniteRoleID)
-					AppendRoleName(&eligibleRoles, "**Infinite 100%**")
 				}
 			}
 		}
