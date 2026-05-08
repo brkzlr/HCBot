@@ -73,9 +73,6 @@ func init() {
 	if err != nil {
 		log.Fatalf("Error opening/creating database! Error: %s", err)
 	}
-
-	// TODO: Remove after a bit of testing
-	// go KeepAliveRequest() // Do a simple request to OpenXBL so token is authenticated
 }
 
 func main() {
@@ -104,20 +101,14 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM)
 
-	// TODO: Remove KeepAliveRequest after testing
-
-	// ticker := time.NewTicker(1 * time.Hour)
 	achievTicker := time.NewTicker(1 * time.Minute)
-	// defer ticker.Stop()
 	defer achievTicker.Stop()
 
 MainLoop:
 	for {
 		select {
-		// case <-ticker.C:
-		// 	go KeepAliveRequest()
 		case <-achievTicker.C:
-			CheckTimedAchievs(discord)
+			go CheckTimedAchievs(discord)
 		case <-sc:
 			break MainLoop
 		}

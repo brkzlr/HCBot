@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"slices"
@@ -405,13 +404,6 @@ func RequestPlayerGT(gamerTag string) (string, error) {
 	if jsonResp.StatusCode == 404 {
 		str := fmt.Sprintf("I couldn't find any valid \"**%s**\" gamertag! Please make sure you typed the gamertag correctly.", gamerTag)
 		return "", errors.New(str)
-	}
-
-	// TODO: Remove after OpenXBL fixes their shit
-	if len(jsonResp.Content.ProfileUsers) == 0 {
-		bytes, _ := io.ReadAll(resp.Body)
-		log.Println("Garbage data received from OpenXBL: ", string(bytes))
-		return "", errors.New("OpenXBL responded with garbage data, notified <@180932541103079424>. Please try again after BrK's confirmation...")
 	}
 
 	return jsonResp.Content.ProfileUsers[0].ID, nil
