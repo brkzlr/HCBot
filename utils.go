@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -46,13 +45,11 @@ func CheckCooldown(discordID string) (bool, time.Duration) {
 	)
 
 	var rowValue int64
-	err := row.Scan(&rowValue)
-	if err == sql.ErrNoRows {
+	if err := row.Scan(&rowValue); err != nil {
 		return false, 0
-	} else {
-		expirationTime := time.Unix(rowValue, 0)
-		return expirationTime.After(time.Now()), expirationTime.Sub(time.Now())
 	}
+	expirationTime := time.Unix(rowValue, 0)
+	return expirationTime.After(time.Now()), expirationTime.Sub(time.Now())
 }
 
 // This function will query Spartan Assault & Spartan Strike legacy platform achievements
@@ -100,9 +97,9 @@ func CheckLegacyAssaultStrikeAchievements(discordID string) (map[string]GameStat
 			log.Println("Error in x360 achievements GET request: ", err)
 			return nil, errors.New("Error trying to contact the server! Please try again later.")
 		}
-		defer resp.Body.Close()
 
 		if resp.StatusCode != 200 {
+			resp.Body.Close()
 			log.Println("Received http error status code in x360 achievements GET response, status code: ", resp.StatusCode)
 			return nil, errors.New("OpenXBL responded with an error status code. Please try again later.")
 		}
@@ -110,6 +107,7 @@ func CheckLegacyAssaultStrikeAchievements(discordID string) (map[string]GameStat
 		var achievsResp X360AchievsResp
 		decoder := json.NewDecoder(resp.Body)
 		decoder.Decode(&achievsResp)
+		resp.Body.Close()
 
 		achievCountToCheck := 0
 		switch titleID {
@@ -175,27 +173,6 @@ func CheckTimedAchievs(session *discordgo.Session) {
 	}
 }
 
-func GetAllGuildMembers(s *discordgo.Session, guildID string) []*discordgo.Member {
-	guildMembers, _ := s.GuildMembers(guildID, "", 1000)
-
-	// Discord API can only return a maximum of 1000 members.
-	// To get all the members for guilds that have more than this limit
-	// we check the length of the returned slice and if it's 1000 we try to grab
-	// the next 1000 starting from the last member in the previous request using it's ID,
-	// repeating this until we get a slice with less than 1000.
-	gotAll := len(guildMembers) < 1000
-	for !gotAll {
-		lastID := guildMembers[len(guildMembers)-1].User.ID
-		tempGMembers, _ := s.GuildMembers(guildID, lastID, 1000)
-		if len(tempGMembers) < 1000 {
-			gotAll = true
-		}
-		guildMembers = append(guildMembers, tempGMembers...)
-	}
-
-	return guildMembers
-}
-
 func GetAsPtr[T any](v T) *T {
 	return &v
 }
@@ -219,11 +196,7 @@ func GetGamertagID(discordID string) (xuid string, exists bool) {
 	)
 
 	err := row.Scan(&xuid)
-	if err == sql.ErrNoRows {
-		exists = false
-	} else {
-		exists = true
-	}
+	exists = (err == nil)
 	return
 }
 
@@ -271,20 +244,6 @@ func IsStaff(member *discordgo.Member) bool {
 
 func LogCommand(cmdName, author string) {
 	infoLog.Println(cmdName + " command used by " + author)
-}
-
-func KeepAliveRequest() {
-	req, _ := http.NewRequest("GET", "https://api.xbl.io/v2/account", nil)
-	req.Header.Add("X-Authorization", tokens.OpenXBL)
-	req.Header.Add("Accept", "application/json")
-
-	client := &http.Client{}
-	resp, _ := client.Do(req)
-	if resp != nil {
-		resp.Body.Close()
-	}
-	// We don't care about the result, we just want to do a GET request on OpenXBL
-	// so our token gets refreshed and future requests after idling won't fail
 }
 
 func ReplyToMsg(s *discordgo.Session, m *discordgo.Message, replyMsg string) (*discordgo.Message, error) {

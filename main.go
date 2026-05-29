@@ -62,12 +62,14 @@ func init() {
 	// Grab Discord and OpenXBL Tokens
 	jsonFile, err := os.Open("tokens.json")
 	if err != nil {
-		log.Fatal("Error opening tokens.json! Aborting!")
+		log.Fatalf("Error opening tokens.json! Error: %s", err)
 	}
 	defer jsonFile.Close()
 
 	fileByte, _ := io.ReadAll(jsonFile)
-	json.Unmarshal(fileByte, &tokens)
+	if err := json.Unmarshal(fileByte, &tokens); err != nil {
+		log.Fatalf("Error parsing tokens.json! Error: %s", err)
+	}
 
 	err = initDatabase("database.db")
 	if err != nil {

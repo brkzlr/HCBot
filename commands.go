@@ -314,18 +314,24 @@ func InitCommands(s *discordgo.Session) error {
 							s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, hcRoleID)
 							AppendRoleName(&eligibleRoles, "**Halo Completionist**")
 						}
-					} else if !currentRoles[infiniteRoleID] {
-						// Grant Infinite as we have it done and couldn't give HC
-						s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, infiniteRoleID)
-						AppendRoleName(&eligibleRoles, "**Infinite 100%**")
+					} else {
+						// Couldn't grant HC, so fall back to the individual base roles.
+						if modernCompletionMap[mccTitleID] == COMPLETED && !currentRoles[mccRoleID] && !currentRoles[mccMasterRoleID] && !currentRoles[modernRoleID] {
+							s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, mccRoleID)
+							AppendRoleName(&eligibleRoles, "**MCC 100%**")
+						}
+						if modernCompletionMap[infiniteTitleID] == COMPLETED && !currentRoles[infiniteRoleID] && !currentRoles[modernRoleID] {
+							s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, infiniteRoleID)
+							AppendRoleName(&eligibleRoles, "**Infinite 100%**")
+						}
 					}
 				} else {
 					// Check MCC and Infinite eligibility
-					if modernCompletionMap[mccTitleID] == COMPLETED && !currentRoles[mccRoleID] {
+					if modernCompletionMap[mccTitleID] == COMPLETED && !currentRoles[mccRoleID] && !currentRoles[mccMasterRoleID] && !currentRoles[modernRoleID] {
 						s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, mccRoleID)
 						AppendRoleName(&eligibleRoles, "**MCC 100%**")
 					}
-					if modernCompletionMap[infiniteTitleID] == COMPLETED && !currentRoles[infiniteRoleID] {
+					if modernCompletionMap[infiniteTitleID] == COMPLETED && !currentRoles[infiniteRoleID] && !currentRoles[modernRoleID] {
 						s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, infiniteRoleID)
 						AppendRoleName(&eligibleRoles, "**Infinite 100%**")
 					}

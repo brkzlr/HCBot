@@ -12,12 +12,13 @@ import (
 var isTimerActive bool
 
 func messageReactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
+	if m.Emoji.ID != "1117969363627159622" {
+		return
+	}
+
 	message, err := s.ChannelMessage(m.ChannelID, m.MessageID)
 	if err != nil {
 		log.Println("Error retrieving message for reaction checking!")
-		return
-	}
-	if m.Emoji.ID != "1117969363627159622" {
 		return
 	}
 	if message.Author.ID != s.State.User.ID {
