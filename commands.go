@@ -425,18 +425,18 @@ Note: **If you fulfill the requirements for the Modern/Halo Completionist role b
 				correctChannelID = option.StringValue()
 			}
 		}
-		RespondACKPing(s, i.Interaction)
+		RespondACKToInteraction(s, i.Interaction)
 
 		message, err := s.ChannelMessage(i.ChannelID, messageID)
 		if err != nil {
-			RespondToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("Error while retrieving message! (Error: %s)", err))
+			RespondFollowUpToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("Error while retrieving message! (Error: %s)", err))
 			return
 		}
 
 		replyStr := fmt.Sprintf("<@%s> The topic of your message is not fit for this channel!\nIt seems you might've not read <#1046457435277242470> fully, ***which is mandatory reading***.\n\nAs a tip, you should use <#%s> for this topic, but please be more mindful of the channel you're typing in next time.", message.Author.ID, correctChannelID)
 		ReplyToMsg(s, message, replyStr)
 		s.ChannelMessageDelete(i.ChannelID, messageID)
-		RespondToInteractionEphemeral(s, i.Interaction, "Successfully warned the user!")
+		RespondFollowUpToInteractionEphemeral(s, i.Interaction, "Successfully warned the user!")
 	}
 
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {

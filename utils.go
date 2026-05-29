@@ -297,18 +297,22 @@ func ReplyToMsg(s *discordgo.Session, m *discordgo.Message, replyMsg string) (*d
 func RespondACKToInteraction(s *discordgo.Session, i *discordgo.Interaction) error {
 	return s.InteractionRespond(i, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-	})
-}
-
-func RespondACKPing(s *discordgo.Session, i *discordgo.Interaction) error {
-	return s.InteractionRespond(i, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponsePong,
+		Data: &discordgo.InteractionResponseData{
+			Flags: discordgo.MessageFlagsEphemeral,
+		},
 	})
 }
 
 func RespondFollowUpToInteraction(s *discordgo.Session, i *discordgo.Interaction, respondMsg string) (*discordgo.Message, error) {
 	return s.FollowupMessageCreate(i, true, &discordgo.WebhookParams{
 		Content: respondMsg,
+	})
+}
+
+func RespondFollowUpToInteractionEphemeral(s *discordgo.Session, i *discordgo.Interaction, respondMsg string) (*discordgo.Message, error) {
+	return s.FollowupMessageCreate(i, true, &discordgo.WebhookParams{
+		Content: respondMsg,
+		Flags:   discordgo.MessageFlagsEphemeral,
 	})
 }
 
