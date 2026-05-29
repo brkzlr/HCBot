@@ -91,7 +91,7 @@ func CheckLegacyAssaultStrikeAchievements(discordID string) (map[string]GameStat
 
 		req.Header.Add("X-Authorization", tokens.OpenXBL)
 		req.Header.Add("Accept", "application/json")
-		client := &http.Client{}
+		client := &http.Client{Timeout: 10 * time.Second}
 		resp, err := client.Do(req)
 		if err != nil {
 			log.Println("Error in x360 achievements GET request: ", err)
@@ -309,7 +309,7 @@ func RequestPlayerAchievements(discordID string) (AchievementsResp, error) {
 
 	req.Header.Add("X-Authorization", tokens.OpenXBL)
 	req.Header.Add("Accept", "application/json")
-	client := &http.Client{}
+	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println("Error in achievements GET request: ", err)
@@ -347,7 +347,7 @@ func RequestPlayerGT(gamerTag string) (string, error) {
 
 	req.Header.Add("X-Authorization", tokens.OpenXBL)
 	req.Header.Add("Accept", "application/json")
-	client := &http.Client{}
+	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println("Error in gamertag GET request: ", err)
