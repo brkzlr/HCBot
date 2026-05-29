@@ -14,18 +14,24 @@ import (
 )
 
 func AddGamertagToDB(discordID, xblID string) {
-	database.Exec(
+	_, err := database.Exec(
 		`INSERT INTO users (discordID, xuid) VALUES (?,?)
 		ON CONFLICT(discordID) DO UPDATE SET xuid=?;`, discordID, xblID, xblID,
 	)
+	if err != nil {
+		log.Printf("Failed to save gamertag for user %s: %s", discordID, err)
+	}
 }
 
 func AddRoleCheckCooldown(discordID string) {
 	unixTimeCD := time.Now().Add(time.Hour * 1).Unix()
-	database.Exec(
+	_, err := database.Exec(
 		`INSERT INTO moderation (discordID, command_cooldown) VALUES (?,?)
 		ON CONFLICT(discordID) DO UPDATE SET command_cooldown=?;`, discordID, unixTimeCD, unixTimeCD,
 	)
+	if err != nil {
+		log.Printf("Failed to set rolecheck cooldown for user %s: %s", discordID, err)
+	}
 }
 
 func AppendRoleName(rolesString *string, roleName string) {
