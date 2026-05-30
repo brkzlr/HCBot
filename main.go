@@ -77,6 +77,15 @@ func init() {
 	}
 }
 
+func nextNineAM(now time.Time) time.Time {
+	now = now.UTC()
+	next := time.Date(now.Year(), now.Month(), now.Day(), 9, 0, 0, 0, time.UTC)
+	if !next.After(now) {
+		next = next.AddDate(0, 0, 1)
+	}
+	return next
+}
+
 func main() {
 	discord, err := discordgo.New("Bot " + tokens.Discord)
 	if err != nil {
@@ -103,14 +112,15 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM)
 
-	achievTicker := time.NewTicker(1 * time.Minute)
-	defer achievTicker.Stop()
+	achievTimer := time.NewTimer(time.Until(nextNineAM(time.Now())))
+	defer achievTimer.Stop()
 
 MainLoop:
 	for {
 		select {
-		case <-achievTicker.C:
+		case <-achievTimer.C:
 			go CheckTimedAchievs(discord)
+			achievTimer.Reset(time.Until(nextNineAM(time.Now())))
 		case <-sc:
 			break MainLoop
 		}

@@ -154,10 +154,8 @@ func CheckLegacyAssaultStrikeAchievements(discordID string) (map[string]GameStat
 }
 
 func CheckTimedAchievs(session *discordgo.Session) {
+	// Invoked once per day at ~9 AM UTC by the scheduler in main.
 	today := time.Now().UTC()
-	if today.Hour() != 9 || today.Minute() != 0 { // TODO: Find a better way to activate at 9 AM UTC
-		return
-	}
 
 	baseText := "Remember to grab your <@&%d> achievement today! %s\n\n***If this message helped you get the achievement, make sure to react with <:pepeok:1117969363627159622> so I can remove the role from you!***"
 
