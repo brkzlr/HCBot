@@ -146,14 +146,27 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if !platformRegex.MatchString(strings.ToLower(name)) {
 			hasPCRole := HasRole(m.Member, coopPCRole)
 			hasXboxRole := HasRole(m.Member, coopXboxRole)
+
+			var tag string
 			if hasPCRole && hasXboxRole {
-				s.GuildMemberNickname(hcGuildID, m.Author.ID, fmt.Sprintf("%s [PC/Xbox]", name))
+				tag = "[PC/Xbox]"
 			} else if hasPCRole {
-				s.GuildMemberNickname(hcGuildID, m.Author.ID, fmt.Sprintf("%s [PC]", name))
+				tag = "[PC]"
 			} else if hasXboxRole {
-				s.GuildMemberNickname(hcGuildID, m.Author.ID, fmt.Sprintf("%s [Xbox]", name))
-			} else {
-				str := fmt.Sprintf("<@%s> You're trying to talk in non-cross-platform MCC channels but you're missing a platform tag in your name!\nYou have no co-op PC/Xbox role assigned so automatic platform tagging failed.\n\nFor more information on how to manually set and examples of platform tags, please check <#1046457435277242470> ***which is mandatory reading***!", m.Author.ID)
+				tag = "[Xbox]"
+			}
+
+			tagged := false
+			if tag != "" {
+				if err := s.GuildMemberNickname(hcGuildID, m.Author.ID, fmt.Sprintf("%s %s", name, tag)); err != nil {
+					log.Printf("Failed to auto-tag platform for user %s: %s", m.Author.ID, err)
+				} else {
+					tagged = true
+				}
+			}
+
+			if !tagged {
+				str := fmt.Sprintf("<@%s> You're trying to talk in non-cross-platform MCC channels but you're missing a platform tag in your name!\nAutomatic platform tagging failed because you have no co-op PC/Xbox role assigned or your name is too long.\n\nFor more information on how to manually set platform tags with examples, please check <#1046457435277242470> ***which is mandatory reading***!", m.Author.ID)
 				s.ChannelMessageSend(m.ChannelID, str)
 				s.ChannelMessageDelete(m.ChannelID, m.ID)
 				return
