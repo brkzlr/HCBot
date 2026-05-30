@@ -260,6 +260,12 @@ func ReplyToMsg(s *discordgo.Session, m *discordgo.Message, replyMsg string) (*d
 func RespondACKToInteraction(s *discordgo.Session, i *discordgo.Interaction) error {
 	return s.InteractionRespond(i, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+	})
+}
+
+func RespondACKToInteractionEphemeral(s *discordgo.Session, i *discordgo.Interaction) error {
+	return s.InteractionRespond(i, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Flags: discordgo.MessageFlagsEphemeral,
 		},

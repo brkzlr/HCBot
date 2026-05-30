@@ -431,7 +431,7 @@ Note: **If you fulfill the requirements for the Modern/Halo Completionist role b
 				correctChannelID = option.StringValue()
 			}
 		}
-		RespondACKToInteraction(s, i.Interaction)
+		RespondACKToInteractionEphemeral(s, i.Interaction)
 
 		message, err := s.ChannelMessage(i.ChannelID, messageID)
 		if err != nil {
