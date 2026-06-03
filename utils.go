@@ -234,16 +234,9 @@ func HasRoles(member *discordgo.Member, rolesID []string) map[string]bool {
 }
 
 func IsStaff(member *discordgo.Member) bool {
-	// Pillar / Oracle (Mod) / Guardian (Admin) / Founder roles
-	staffRoles := []string{"987989822813650974", "984081125657964664", "984080972108668959", "1075504782023852102"}
-	result := HasRoles(member, staffRoles)
-	for _, roleID := range staffRoles {
-		if result[roleID] {
-			return true
-		}
-	}
-
-	return false
+	// Sentinel (Admin) / Oracle (Mod) / Guardian (Admin) / Founder roles
+	staffRoles := []string{"984083352367800410", "984081125657964664", "984080972108668959", "1075504782023852102"}
+	return HasAnySpecifiedRoles(member, staffRoles)
 }
 
 func LogCommand(cmdName, author string) {
