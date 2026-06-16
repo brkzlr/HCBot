@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"flag"
@@ -8,12 +9,15 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+const disconnectGracePeriod = 2 * time.Minute
 
 var isTest bool
 var guildID string
@@ -92,15 +96,18 @@ func main() {
 		log.Fatal("Error creating Discord session! ", err)
 	}
 
+	discord.Dialer.HandshakeTimeout = 15 * time.Second
 	discord.Identify.Intents = discordgo.IntentsAllWithoutPrivileged | discordgo.IntentGuildMembers | discordgo.IntentMessageContent
 	discord.AddHandler(messageCreate)
 	discord.AddHandler(messageReactionAdd)
+
+	// Register the watchdog before opening so it sees the first Connect event and starts tracking gateway health immediately.
+	restartCh := startConnectionWatchdog(discord)
 
 	err = discord.Open()
 	if err != nil {
 		log.Fatal("Error opening connection! ", err)
 	}
-	defer discord.Close()
 	infoLog.Println("Bot is now running!")
 
 	err = InitCommands(discord)
@@ -115,16 +122,65 @@ func main() {
 	achievTimer := time.NewTimer(time.Until(nextNineAM(time.Now())))
 	defer achievTimer.Stop()
 
-MainLoop:
 	for {
 		select {
 		case <-achievTimer.C:
 			go CheckTimedAchievs(discord)
 			achievTimer.Reset(time.Until(nextNineAM(time.Now())))
 		case <-sc:
-			break MainLoop
+			infoLog.Println("Received shutdown signal, exiting...")
+			gracefulExit(discord, 0)
+		case <-restartCh:
+			log.Printf("Watchdog: gateway down for over %s, exiting for supervisor restart...", disconnectGracePeriod)
+			gracefulExit(discord, 1)
 		}
 	}
+}
 
-	discord.ApplicationCommandBulkOverwrite(discord.State.User.ID, guildID, nil) // Delete all application (slash) commands
+func startConnectionWatchdog(s *discordgo.Session) <-chan struct{} {
+	restartCh := make(chan struct{}, 1)
+
+	var mu sync.Mutex
+	timer := time.AfterFunc(disconnectGracePeriod, func() {
+		select {
+		case restartCh <- struct{}{}:
+		default:
+		}
+	})
+	timer.Stop()
+
+	s.AddHandler(func(_ *discordgo.Session, _ *discordgo.Connect) {
+		mu.Lock()
+		timer.Stop()
+		mu.Unlock()
+	})
+	s.AddHandler(func(_ *discordgo.Session, _ *discordgo.Disconnect) {
+		log.Println("Gateway disconnected, starting reconnect grace period...")
+		mu.Lock()
+		timer.Reset(disconnectGracePeriod)
+		mu.Unlock()
+	})
+
+	return restartCh
+}
+
+func gracefulExit(discord *discordgo.Session, code int) {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if _, err := discord.ApplicationCommandBulkOverwrite(discord.State.User.ID, guildID, nil,
+			discordgo.WithContext(ctx), discordgo.WithRetryOnRatelimit(false)); err != nil {
+			log.Printf("Could not clear slash commands on shutdown: %s", err)
+		}
+		discord.Close()
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(8 * time.Second):
+		log.Println("Shutdown cleanup timed out, forcing exit...")
+	}
+	os.Exit(code)
 }
