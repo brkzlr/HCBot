@@ -110,10 +110,13 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	channel, err := s.Channel(m.ChannelID)
+	channel, err := s.State.Channel(m.ChannelID)
 	if err != nil {
-		log.Printf("Error retrieving channel for message checking! Error: %s", err)
-		return
+		channel, err = s.Channel(m.ChannelID)
+		if err != nil {
+			log.Printf("Error retrieving channel for message checking! Error: %s", err)
+			return
+		}
 	}
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////// Check for wrong channel mp messages //////////////////////////////////
