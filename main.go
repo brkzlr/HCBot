@@ -21,7 +21,7 @@ const disconnectGracePeriod = 2 * time.Minute
 
 var isTest bool
 var guildID string
-var infoLog log.Logger
+var infoLog *log.Logger
 
 func initDatabase(dbPath string) error {
 	var err error
@@ -56,7 +56,7 @@ func initDatabase(dbPath string) error {
 func init() {
 	// Setup logging
 	log.SetPrefix("ERROR: ")
-	infoLog = *log.New(os.Stdout, "INFO: ", log.LstdFlags)
+	infoLog = log.New(os.Stdout, "INFO: ", log.LstdFlags)
 
 	// Parse flags
 	flag.BoolVar(&isTest, "test", false, "Flag to set testing mode, disabling stuff like cooldown functionality.")
