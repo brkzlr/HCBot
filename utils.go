@@ -270,14 +270,16 @@ func RespondACKToInteractionEphemeral(s *discordgo.Session, i *discordgo.Interac
 
 func RespondFollowUpToInteraction(s *discordgo.Session, i *discordgo.Interaction, respondMsg string) (*discordgo.Message, error) {
 	return s.FollowupMessageCreate(i, true, &discordgo.WebhookParams{
-		Content: respondMsg,
+		Content:         respondMsg,
+		AllowedMentions: &discordgo.MessageAllowedMentions{},
 	})
 }
 
 func RespondFollowUpToInteractionEphemeral(s *discordgo.Session, i *discordgo.Interaction, respondMsg string) (*discordgo.Message, error) {
 	return s.FollowupMessageCreate(i, true, &discordgo.WebhookParams{
-		Content: respondMsg,
-		Flags:   discordgo.MessageFlagsEphemeral,
+		Content:         respondMsg,
+		Flags:           discordgo.MessageFlagsEphemeral,
+		AllowedMentions: &discordgo.MessageAllowedMentions{},
 	})
 }
 
@@ -285,7 +287,8 @@ func RespondToInteraction(s *discordgo.Session, i *discordgo.Interaction, respon
 	return s.InteractionRespond(i, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: respondMsg,
+			Content:         respondMsg,
+			AllowedMentions: &discordgo.MessageAllowedMentions{},
 		},
 	})
 }
@@ -294,8 +297,9 @@ func RespondToInteractionEphemeral(s *discordgo.Session, i *discordgo.Interactio
 	return s.InteractionRespond(i, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: respondMsg,
-			Flags:   discordgo.MessageFlagsEphemeral,
+			Content:         respondMsg,
+			Flags:           discordgo.MessageFlagsEphemeral,
+			AllowedMentions: &discordgo.MessageAllowedMentions{},
 		},
 	})
 }
