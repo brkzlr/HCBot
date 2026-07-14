@@ -16,6 +16,9 @@ func messageReactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
 	if m.Emoji.ID != "1117969363627159622" {
 		return
 	}
+	if m.ChannelID != generalMccChannelID {
+		return
+	}
 
 	message, err := s.ChannelMessage(m.ChannelID, m.MessageID)
 	if err != nil {
