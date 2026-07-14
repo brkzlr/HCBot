@@ -96,15 +96,17 @@ func InitCommands(s *discordgo.Session) error {
 			return
 		}
 
+		RespondACKToInteraction(s, i.Interaction)
+
 		gTag := i.ApplicationCommandData().Options[0].StringValue()
 		xuid, err := RequestPlayerGT(gTag)
 		if err != nil {
-			RespondToInteraction(s, i.Interaction, err.Error())
+			RespondFollowUpToInteraction(s, i.Interaction, err.Error())
 			return
 		}
 
 		AddGamertagToDB(i.Member.User.ID, xuid)
-		RespondToInteraction(s, i.Interaction, fmt.Sprintf("Gamertag set to \"%s\".", gTag))
+		RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Gamertag set to \"%s\".", gTag))
 	}
 
 	appCommandsHandlers["rolecheck"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
