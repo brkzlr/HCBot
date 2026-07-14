@@ -116,6 +116,8 @@ func main() {
 	}
 	infoLog.Println("Commands initialised!")
 
+	PruneExpiredCooldowns()
+
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM)
 
@@ -126,6 +128,7 @@ func main() {
 		select {
 		case <-achievTimer.C:
 			go CheckTimedAchievs(discord)
+			go PruneExpiredCooldowns()
 			achievTimer.Reset(time.Until(nextNineAM(time.Now())))
 		case <-sc:
 			infoLog.Println("Received shutdown signal, exiting...")

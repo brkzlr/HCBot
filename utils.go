@@ -247,6 +247,15 @@ func LogCommand(cmdName, author string) {
 	infoLog.Println(cmdName + " command used by " + author)
 }
 
+func PruneExpiredCooldowns() {
+	_, err := database.Exec(
+		`DELETE FROM moderation WHERE command_cooldown<?;`, time.Now().Unix(),
+	)
+	if err != nil {
+		log.Printf("Failed to prune expired cooldowns: %s", err)
+	}
+}
+
 func ReplyToMsg(s *discordgo.Session, m *discordgo.Message, replyMsg string) (*discordgo.Message, error) {
 	return s.ChannelMessageSendReply(m.ChannelID, replyMsg, &discordgo.MessageReference{
 		MessageID: m.ID,
