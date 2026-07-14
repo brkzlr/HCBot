@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
 
-var isTimerActive bool
+var isTimerActive atomic.Bool
 
 func messageReactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
 	if m.Emoji.ID != "1117969363627159622" {
@@ -46,12 +47,11 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
-	if m.ChannelID == dropsChannelID && m.Author.ID == "1287938268423524352" && !isTimerActive {
-		isTimerActive = true
+	if m.ChannelID == dropsChannelID && m.Author.ID == "1287938268423524352" && isTimerActive.CompareAndSwap(false, true) {
 		time.AfterFunc(10*time.Minute, func() {
 			replyStr := fmt.Sprintf("Hey <@&%s>! Check out this ^ drop/giveaway.", dropsRoleID)
 			ReplyToMsg(s, m.Message, replyStr)
-			isTimerActive = false
+			isTimerActive.Store(false)
 		})
 		return
 	}
