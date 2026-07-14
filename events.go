@@ -71,14 +71,14 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	///////////////////////// Check for proof-of-completion channel misuse //////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
 	if m.ChannelID == proofChannelID && !strings.Contains(msg, "manual check: modern") && !strings.Contains(msg, "manual check: halo") {
-		if (strings.Contains(msg, "mcc") && !strings.Contains(msg, "master")) ||
+		if (mccProofRegex.MatchString(msg) && !strings.Contains(msg, "master")) ||
 			strings.Contains(msg, "chief collection") ||
-			strings.Contains(msg, "china") || strings.Contains(msg, "cn") ||
+			strings.Contains(msg, "china") ||
 			strings.Contains(msg, "infinite") ||
 			strings.Contains(msg, "legacy") ||
 			strings.Contains(msg, "modern") ||
 			strings.Contains(msg, "halo completionist") ||
-			strings.Contains(msg, "hc") {
+			abbrevProofRegex.MatchString(msg) {
 
 			str := fmt.Sprintf("<@%s> You can obtain that role **only** by using me in <#%s>! Use /rolecheck in there to begin.", m.Author.ID, botChannelID)
 			s.ChannelMessageSend(proofChannelID, str)

@@ -78,6 +78,10 @@ var (
 	multiplayerSoloAchievRegex = regexp.MustCompile(`tour of duty|eminent domain|gate your thirst|high altitude thirst|rule your thirst|thirst locked down|bloody thirsty|worship your thirst|blastacular|power play|stayin(g|')? alive|sightseeing|checking out your options`)
 	platformRegex              = regexp.MustCompile(`(?:\(|\[).*(pc|xbox).*(?:\)|\])`)
 	roleRegex                  = regexp.MustCompile(`<@&(\d+)>`)
+
+	// Word-boundary matching for short keywords that can appear inside innocent words (e.g. "picnic", "McCloud")
+	mccProofRegex    = regexp.MustCompile(`\bmcc\b`)
+	abbrevProofRegex = regexp.MustCompile(`\b(?:cn|hc)\b`)
 )
 
 // Timed achievements variables
