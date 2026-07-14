@@ -71,7 +71,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	///////////////////////// Check for proof-of-completion channel misuse //////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////////////////////
 	if m.ChannelID == proofChannelID && !strings.Contains(msg, "manual check: modern") && !strings.Contains(msg, "manual check: halo") {
-		if (mccProofRegex.MatchString(msg) && !strings.Contains(msg, "master")) ||
+		if (mccProofRegex.MatchString(msg) && !strings.Contains(msg, "master") && !strings.Contains(msg, "true max") && !strings.Contains(msg, "max rank")) ||
 			strings.Contains(msg, "chief collection") ||
 			strings.Contains(msg, "china") ||
 			strings.Contains(msg, "infinite") ||
@@ -89,6 +89,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				return strings.Contains(msg, "franchise") ||
 					strings.Contains(msg, "lasochist") ||
 					strings.Contains(msg, "mcc master") ||
+					strings.Contains(msg, "true max") ||
+					strings.Contains(msg, "max rank") ||
 					strings.Contains(msg, "ice") ||
 					strings.Contains(msg, "fire") ||
 					strings.Contains(msg, "jacker") ||
