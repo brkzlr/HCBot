@@ -162,7 +162,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 			tagged := false
 			if tag != "" {
-				if err := s.GuildMemberNickname(hcGuildID, m.Author.ID, fmt.Sprintf("%s %s", name, tag)); err != nil {
+				if err := s.GuildMemberNickname(guildID, m.Author.ID, fmt.Sprintf("%s %s", name, tag)); err != nil {
 					log.Printf("Failed to auto-tag platform for user %s: %s", m.Author.ID, err)
 				} else {
 					tagged = true
