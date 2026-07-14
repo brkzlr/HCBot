@@ -73,8 +73,12 @@ func InitCommands(s *discordgo.Session) error {
 			"Legacy Completionist:  **%d**\n" +
 			"Lasochist:  **%d**\n" +
 			"MCC Master:  **%d**\n" +
+			"MCC True Max Rank:  **%d**\n" +
 			"Halo Completionist:  **%d**\n" +
-			"Franchise Completionist:  **%d**\n"
+			"Franchise Completionist:  **%d**\n" +
+			"343 Ice:  **%d**\n" +
+			"343 Fire:  **%d**\n" +
+			"Jacker Stream Snipel:  **%d**\n"
 
 		resultMsg := fmt.Sprintf(resultStr,
 			rolesCount[mccRoleID],
@@ -84,8 +88,12 @@ func InitCommands(s *discordgo.Session) error {
 			rolesCount[legacyRoleID],
 			rolesCount[lasochistRoleID],
 			rolesCount[mccMasterRoleID],
+			rolesCount[trueMaxRoleID],
 			rolesCount[hcRoleID],
-			rolesCount[fcRoleID])
+			rolesCount[fcRoleID],
+			rolesCount[iceRoleID],
+			rolesCount[fireRoleID],
+			rolesCount[jackerRoleID])
 
 		RespondToInteraction(s, i.Interaction, resultMsg)
 	}
