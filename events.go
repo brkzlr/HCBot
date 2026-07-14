@@ -28,7 +28,11 @@ func messageReactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
 		return
 	}
 
-	roleID := roleRegex.FindStringSubmatch(message.Content)[1]
+	roleMatch := roleRegex.FindStringSubmatch(message.Content)
+	if roleMatch == nil {
+		return
+	}
+	roleID := roleMatch[1]
 
 	err = s.GuildMemberRoleRemove(guildID, m.UserID, roleID)
 	if err != nil {

@@ -111,9 +111,12 @@ func CheckLegacyAssaultStrikeAchievements(discordID string) (map[string]GameStat
 		}
 
 		var achievsResp X360AchievsResp
-		decoder := json.NewDecoder(resp.Body)
-		decoder.Decode(&achievsResp)
+		err = json.NewDecoder(resp.Body).Decode(&achievsResp)
 		resp.Body.Close()
+		if err != nil {
+			log.Println("Error decoding x360 achievements GET response: ", err)
+			return nil, errors.New("OpenXBL sent an invalid response. Please try again later.")
+		}
 
 		achievCountToCheck := 0
 		switch titleID {
@@ -326,8 +329,10 @@ func RequestPlayerAchievements(discordID string) (AchievementsResp, error) {
 	}
 
 	var achievsResp AchievementsResp
-	decoder := json.NewDecoder(resp.Body)
-	decoder.Decode(&achievsResp)
+	if err := json.NewDecoder(resp.Body).Decode(&achievsResp); err != nil {
+		log.Println("Error decoding achievements GET response: ", err)
+		return AchievementsResp{}, errors.New("OpenXBL sent an invalid response. Please try again later.")
+	}
 
 	if len(achievsResp.Content.Titles) == 0 {
 		return AchievementsResp{}, errors.New("You have either not played any games or your Xbox profile is private.")
@@ -364,12 +369,18 @@ func RequestPlayerGT(gamerTag string) (string, error) {
 	}
 
 	var jsonResp GTResp
-	decoder := json.NewDecoder(resp.Body)
-	decoder.Decode(&jsonResp)
+	if err := json.NewDecoder(resp.Body).Decode(&jsonResp); err != nil {
+		log.Println("Error decoding gamertag GET response: ", err)
+		return "", errors.New("OpenXBL sent an invalid response. Please try again later.")
+	}
 
 	if jsonResp.StatusCode == 404 {
 		str := fmt.Sprintf("I couldn't find any valid \"**%s**\" gamertag! Please make sure you typed the gamertag correctly.", gamerTag)
 		return "", errors.New(str)
+	}
+	if len(jsonResp.Content.ProfileUsers) == 0 {
+		log.Println("Gamertag GET response contains no profileUsers despite no 404 code")
+		return "", errors.New("OpenXBL sent an invalid response. Please try again later.")
 	}
 
 	return jsonResp.Content.ProfileUsers[0].ID, nil

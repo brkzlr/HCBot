@@ -446,6 +446,9 @@ Note: **If you fulfill the requirements for the Modern/Halo Completionist role b
 	}
 
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		if i.Type != discordgo.InteractionApplicationCommand {
+			return
+		}
 		if handler, exists := appCommandsHandlers[i.ApplicationCommandData().Name]; exists {
 			handler(s, i)
 		}
