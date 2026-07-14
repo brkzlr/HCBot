@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -118,7 +119,8 @@ func InitCommands(s *discordgo.Session) error {
 		RespondACKToInteraction(s, i.Interaction)
 
 		if onCooldown, duration := CheckCooldown(i.Member.User.ID); onCooldown {
-			RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Sorry! You're on cooldown for this command. Remaining duration: %s", duration.String()))
+			remaining := int(duration.Round(time.Second).Seconds())
+			RespondFollowUpToInteraction(s, i.Interaction, fmt.Sprintf("Sorry! You're on cooldown for this command. Remaining duration: %dm %ds", remaining/60, remaining%60))
 			return
 		}
 
