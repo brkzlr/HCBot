@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -347,11 +348,12 @@ func RequestPlayerAchievements(discordID string) (AchievementsResp, error) {
 
 func RequestPlayerGT(gamerTag string) (string, error) {
 	// Gamertags with a suffix should not include the hashtag
-	urlTag := strings.ReplaceAll(gamerTag, "#", "")
-	urlTag = strings.ReplaceAll(urlTag, " ", "%20")
-	url := "https://api.xbl.io/v2/friends/search?gt=" + urlTag
+	urlTag := url.QueryEscape(strings.ReplaceAll(gamerTag, "#", ""))
+	// QueryEscape encodes spaces as '+' but we'll switch to the safer %20
+	urlTag = strings.ReplaceAll(urlTag, "+", "%20")
+	reqURL := "https://api.xbl.io/v2/friends/search?gt=" + urlTag
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {
 		log.Println("Error in creating gamertag GET request: ", err)
 		return "", errors.New("Whoops! Sorry, internal error. Please try again.")
