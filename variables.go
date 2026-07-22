@@ -40,6 +40,7 @@ const (
 	hcGuildID = "984075026816991252"
 
 	// Title IDs
+	hceTitleID      = "2082978535" // Campaign Evolved (2026 CE Remake)
 	mccTitleID      = "1144039928"
 	mccChinaTitleID = "812065290"
 	hwdeTitleID     = "1030018025"

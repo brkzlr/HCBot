@@ -153,6 +153,7 @@ func InitCommands(s *discordgo.Session) error {
 			hwdeTitleID:     NOT_FOUND,
 			hw2TitleID:      NOT_FOUND,
 			infiniteTitleID: NOT_FOUND,
+			hceTitleID:      NOT_FOUND,
 		}
 		legacyCompletionMap := map[string]GameStatus{
 			hceaTitleID:  NOT_FOUND,
@@ -369,6 +370,7 @@ Modern games:
 - **Halo Wars: Definitive Edition**: %s
 - **Halo Wars 2**: %s
 - **Halo Infinite**: %s
+- **Halo: Campaign Evolved**: %s
 
 Legacy games:
 - **Halo: Combat Evolved Anniversary**: %s
@@ -403,6 +405,7 @@ Note: **If you fulfill the requirements for the Modern/Halo Completionist role b
 				GetCompletionSymbol(modernCompletionMap[hwdeTitleID]),
 				GetCompletionSymbol(modernCompletionMap[hw2TitleID]),
 				GetCompletionSymbol(modernCompletionMap[infiniteTitleID]),
+				GetCompletionSymbol(modernCompletionMap[hceTitleID]),
 				GetCompletionSymbol(legacyCompletionMap[hceaTitleID]),
 				GetCompletionSymbol(legacyCompletionMap[h3TitleID]),
 				GetCompletionSymbol(legacyCompletionMap[hwTitleID]),
