@@ -198,6 +198,47 @@ func GetCompletionSymbol(status GameStatus) string {
 	return "❔"
 }
 
+// TODO BRK: Delete this if past the grace period.
+func CheckHCECompletion(xuid string) (bool, error) {
+	req, err := http.NewRequest("GET", "https://api.xbl.io/v2/achievements/player/"+url.PathEscape(xuid), nil)
+	if err != nil {
+		return false, errors.New("Couldn't create the OpenXBL request")
+	}
+	req.Header.Add("X-Authorization", tokens.OpenXBL)
+	req.Header.Add("Accept", "application/json")
+
+	resp, err := (&http.Client{Timeout: 10 * time.Second}).Do(req)
+	if err != nil {
+		return false, errors.New("Couldn't contact OpenXBL")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return false, nil
+	}
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("OpenXBL returned status code %d", resp.StatusCode)
+	}
+
+	var achievements AchievementsResp
+	if err := json.NewDecoder(resp.Body).Decode(&achievements); err != nil {
+		return false, errors.New("OpenXBL returned an invalid response")
+	}
+	if achievements.StatusCode == http.StatusNotFound {
+		return false, nil
+	}
+	if achievements.StatusCode != 0 && achievements.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("OpenXBL returned status code %d", achievements.StatusCode)
+	}
+	for _, title := range achievements.Content.Titles {
+		if title.TitleID == hceTitleID || title.ModernTitleID == hceTitleID {
+			return title.Achievement.TotalGamerscore != 0 &&
+				title.Achievement.CurrentGamerscore == title.Achievement.TotalGamerscore, nil
+		}
+	}
+	return false, nil
+}
+
 func GetGamertagID(discordID string) (xuid string, exists bool) {
 	row := database.QueryRow(
 		`SELECT xuid FROM users WHERE discordID=?`, discordID,

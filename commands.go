@@ -1,8 +1,10 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -14,6 +16,11 @@ func InitCommands(s *discordgo.Session) error {
 		{
 			Name:        "count",
 			Description: "Show the number of users of each completion role",
+		},
+		{
+			Name:                     "checkhce",
+			Description:              "Check Campaign Evolved completion for completionist members",
+			DefaultMemberPermissions: GetAsPtr[int64](discordgo.PermissionModerateMembers),
 		},
 		{
 			Name:        "gamertag",
@@ -96,6 +103,99 @@ func InitCommands(s *discordgo.Session) error {
 			rolesCount[jackerRoleID])
 
 		RespondToInteraction(s, i.Interaction, resultMsg)
+	}
+
+	// TODO BRK: Delete this if past the grace period.
+	appCommandsHandlers["checkhce"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		LogCommand("checkhce", i.Member.User.Username)
+		if i.Member.Permissions&(discordgo.PermissionModerateMembers|discordgo.PermissionAdministrator) == 0 {
+			RespondToInteractionEphemeral(s, i.Interaction, "This command requires Moderate Members permission.")
+			return
+		}
+		RespondACKToInteractionEphemeral(s, i.Interaction)
+
+		var members []*discordgo.Member
+		for after := ""; ; {
+			page, err := s.GuildMembers(i.GuildID, after, 1000)
+			if err != nil {
+				log.Printf("Error grabbing guild members for HCE check: %s", err)
+				RespondFollowUpToInteractionEphemeral(s, i.Interaction, "Couldn't retrieve the guild member list.")
+				return
+			}
+			members = append(members, page...)
+			if len(page) < 1000 {
+				break
+			}
+			after = page[len(page)-1].User.ID
+		}
+
+		roles := []struct {
+			heading string
+			id      string
+		}{
+			{"Modern members:", modernRoleID},
+			{"HC members:", hcRoleID},
+			{"FC members:", fcRoleID},
+		}
+		memberStatuses := make(map[string]string)
+		xuidStatuses := make(map[string]string)
+		var report strings.Builder
+
+		for _, role := range roles {
+			report.WriteString(role.heading)
+			report.WriteByte('\n')
+			found := false
+			for _, member := range members {
+				if !HasRole(member, role.id) {
+					continue
+				}
+				found = true
+				status, checked := memberStatuses[member.User.ID]
+				if !checked {
+					var xuid string
+					err := database.QueryRow(`SELECT xuid FROM users WHERE discordID=?`, member.User.ID).Scan(&xuid)
+					if err == sql.ErrNoRows {
+						status = "Not present in database"
+					} else if err != nil {
+						log.Printf("Error retrieving XUID for Discord user %s: %s", member.User.ID, err)
+						RespondFollowUpToInteractionEphemeral(s, i.Interaction, "Couldn't retrieve XUIDs from the database.")
+						return
+					} else if status, checked = xuidStatuses[xuid]; !checked {
+						completed, err := CheckHCECompletion(xuid)
+						if err != nil {
+							log.Printf("Error checking HCE completion for Discord user %s: %s", member.User.ID, err)
+							RespondFollowUpToInteractionEphemeral(s, i.Interaction, fmt.Sprintf("Couldn't check %s: %s", member.DisplayName(), err))
+							return
+						}
+						status = "Not completed"
+						if completed {
+							status = "Completed"
+						}
+						xuidStatuses[xuid] = status
+					}
+					memberStatuses[member.User.ID] = status
+				}
+				fmt.Fprintf(&report, "- %s: %s\n", member.DisplayName(), status)
+			}
+			if !found {
+				report.WriteString("- None\n")
+			}
+			report.WriteByte('\n')
+		}
+
+		result := strings.TrimSpace(report.String())
+		params := &discordgo.WebhookParams{
+			Content:         result,
+			Flags:           discordgo.MessageFlagsEphemeral,
+			AllowedMentions: &discordgo.MessageAllowedMentions{},
+		}
+		if len(result) > 2000 {
+			params.Content = "The HCE report exceeded Discord's message limit, so it is attached as a text file."
+			params.Files = []*discordgo.File{{Name: "checkhce.txt", ContentType: "text/plain", Reader: strings.NewReader(result)}}
+		}
+		if _, err := s.FollowupMessageCreate(i.Interaction, true, params); err != nil {
+			log.Printf("Error sending HCE completion report: %s", err)
+		}
 	}
 
 	appCommandsHandlers["gamertag"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
